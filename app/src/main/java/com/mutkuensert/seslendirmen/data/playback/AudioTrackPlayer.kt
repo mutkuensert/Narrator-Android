@@ -22,7 +22,7 @@ class AudioTrackPlayer @Inject constructor() : AudioPlayer {
     private val lock = Any()
     @Volatile private var activeTrack: AudioTrack? = null
 
-    override suspend fun play(audio: AudioData) = withContext(Dispatchers.IO) {
+    override suspend fun play(audio: AudioData, onStarted: () -> Unit) = withContext(Dispatchers.IO) {
         stop()
         val minimumBufferSize = AudioTrack.getMinBufferSize(
             audio.sampleRate,
@@ -46,7 +46,7 @@ class AudioTrackPlayer @Inject constructor() : AudioPlayer {
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .build(),
                 )
-                .setBufferSizeInBytes(max(minimumBufferSize, 16 * 1024))
+                .setBufferSizeInBytes(max(minimumBufferSize, STREAM_BUFFER_BYTES))
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
         } catch (error: Throwable) {
@@ -55,8 +55,12 @@ class AudioTrackPlayer @Inject constructor() : AudioPlayer {
 
         synchronized(lock) { activeTrack = track }
         try {
-            check(track.state == AudioTrack.STATE_INITIALIZED)
+            check(track.state == AudioTrack.STATE_INITIALIZED) {
+                "AudioTrack was not initialized: sampleRate=${audio.sampleRate}, " +
+                    "minBufferSize=$minimumBufferSize"
+            }
             track.play()
+            onStarted()
             var offset = 0
             while (offset < audio.samples.size) {
                 coroutineContext.ensureActive()
@@ -86,6 +90,20 @@ class AudioTrackPlayer @Inject constructor() : AudioPlayer {
         }
     }
 
+    override fun pause() {
+        val track = synchronized(lock) { activeTrack } ?: return
+        if (track.playState == AudioTrack.PLAYSTATE_PLAYING) {
+            runCatching { track.pause() }
+        }
+    }
+
+    override fun resume() {
+        val track = synchronized(lock) { activeTrack } ?: return
+        if (track.playState == AudioTrack.PLAYSTATE_PAUSED) {
+            runCatching { track.play() }
+        }
+    }
+
     override fun stop() {
         val track = synchronized(lock) {
             activeTrack.also { activeTrack = null }
@@ -100,5 +118,6 @@ class AudioTrackPlayer @Inject constructor() : AudioPlayer {
 
     private companion object {
         const val TAG = "OfflineAudioPlayer"
+        const val STREAM_BUFFER_BYTES = 16 * 1024
     }
 }

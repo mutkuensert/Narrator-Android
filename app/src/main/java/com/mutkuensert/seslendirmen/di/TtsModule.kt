@@ -1,8 +1,12 @@
 package com.mutkuensert.seslendirmen.di
 
 import com.mutkuensert.seslendirmen.data.playback.AudioTrackPlayer
+import com.mutkuensert.seslendirmen.data.playback.BufferedTtsPlaybackController
+import com.mutkuensert.seslendirmen.data.tts.TurkishSentenceChunker
 import com.mutkuensert.seslendirmen.data.tts.SherpaOnnxTtsEngine
 import com.mutkuensert.seslendirmen.domain.playback.AudioPlayer
+import com.mutkuensert.seslendirmen.domain.playback.TtsPlaybackController
+import com.mutkuensert.seslendirmen.domain.repository.SpeechChunker
 import com.mutkuensert.seslendirmen.domain.tts.TtsEngine
 import dagger.Binds
 import dagger.Module
@@ -20,5 +24,15 @@ abstract class TtsModule {
     @Binds
     @Singleton
     abstract fun bindAudioPlayer(implementation: AudioTrackPlayer): AudioPlayer
+
+    @Binds
+    @Singleton
+    abstract fun bindPlaybackController(
+        implementation: BufferedTtsPlaybackController,
+    ): TtsPlaybackController
+
+    @Binds
+    @Singleton
+    abstract fun bindSpeechChunker(implementation: TurkishSentenceChunker): SpeechChunker
 
 }
