@@ -44,6 +44,8 @@ class SherpaOnnxTtsEngine @Inject constructor(
                                 model = "$MODEL_ASSET_DIR/$MODEL_FILE",
                                 tokens = "$MODEL_ASSET_DIR/$TOKENS_FILE",
                                 dataDir = dataDir.absolutePath,
+                                noiseScale = 1f,
+                                noiseScaleW = 1f
                             ),
                             numThreads = Runtime.getRuntime().availableProcessors().coerceIn(1, 4),
                             debug = false,
