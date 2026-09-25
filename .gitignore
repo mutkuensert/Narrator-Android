@@ -1,4 +1,7 @@
 *.iml
+*.apk
+output-metadata.json
+mapping.txt
 .gradle
 /local.properties
 /.idea

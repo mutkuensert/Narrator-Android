@@ -1,4 +1,14 @@
 <resources>
     <string name="app_name">Seslendirmen</string>
     <string name="tts_title">Çevrimdışı Türkçe Seslendirme</string>
+    <string name="notification_channel_name">Sesli okuma</string>
+    <string name="notification_channel_description">PDF seslendirme oynatma kontrolleri</string>
+    <string name="notification_previous">Geri</string>
+    <string name="notification_play">Sürdür</string>
+    <string name="notification_pause">Duraklat</string>
+    <string name="notification_next">İleri</string>
+    <string name="notification_ready">Oynatmaya hazır</string>
+    <string name="notification_preparing">Ses hazırlanıyor · Sayfa %1$d</string>
+    <string name="notification_playing">Oynatılıyor · Sayfa %1$d</string>
+    <string name="notification_paused">Duraklatıldı · Sayfa %1$d</string>
 </resources>

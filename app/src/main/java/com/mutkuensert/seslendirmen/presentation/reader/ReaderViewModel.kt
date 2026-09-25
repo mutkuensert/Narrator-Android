@@ -1,7 +1,9 @@
 package com.mutkuensert.seslendirmen.presentation.reader
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mutkuensert.seslendirmen.data.playback.TtsPlaybackService
 import com.mutkuensert.seslendirmen.data.preferences.LastReadPositionStore
 import com.mutkuensert.seslendirmen.data.preferences.TtsPreferences
 import com.mutkuensert.seslendirmen.domain.model.LastReadPosition
@@ -14,6 +16,7 @@ import com.mutkuensert.seslendirmen.domain.repository.SpeechChunker
 import com.mutkuensert.seslendirmen.domain.playback.TtsPlaybackController
 import com.mutkuensert.seslendirmen.domain.usecase.OpenPdfDocument
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +27,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
+    @param:ApplicationContext private val applicationContext: Context,
     private val openPdfDocument: OpenPdfDocument,
     private val speechChunker: SpeechChunker,
     private val playbackController: TtsPlaybackController,
@@ -94,11 +98,11 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun play() = playbackController.play()
-    fun pause() = playbackController.pause()
-    fun stop() = playbackController.stop()
-    fun next() = playbackController.next()
-    fun previous() = playbackController.previous()
+    fun play() = TtsPlaybackService.play(applicationContext, currentFileName)
+    fun pause() = TtsPlaybackService.pause(applicationContext)
+    fun stop() = TtsPlaybackService.stop(applicationContext)
+    fun next() = TtsPlaybackService.next(applicationContext, currentFileName)
+    fun previous() = TtsPlaybackService.previous(applicationContext, currentFileName)
 
     fun setNumSteps(value: Int) {
         val newValue = value.coerceIn(TtsPreferences.MIN_NUM_STEPS, TtsPreferences.MAX_NUM_STEPS)
@@ -123,7 +127,7 @@ class ReaderViewModel @Inject constructor(
         val firstChunk = chunks.firstOrNull {
             it.pageNumber == pageNumber && it.paragraphIndex == paragraphIndex
         } ?: return
-        playbackController.playFrom(firstChunk.id)
+        TtsPlaybackService.playFrom(applicationContext, currentFileName, firstChunk.id)
     }
 }
 
