@@ -78,8 +78,8 @@ class SherpaOnnxTtsEngine @Inject constructor(
                 val synthesisMs = measureTimeMillis {
                     val generationConfig = GenerationConfig(
                         sid = 6,
-                        speed = 0.95f,
-                        numSteps = 12,
+                        speed = 1f,
+                        numSteps = 15,
                         extra = mapOf("lang" to LANGUAGE_CODE),
                     )
                     result = checkNotNull(tts).generateWithConfig(text, generationConfig)
