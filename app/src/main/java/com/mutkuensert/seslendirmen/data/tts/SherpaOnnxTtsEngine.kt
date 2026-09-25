@@ -3,10 +3,11 @@ package com.mutkuensert.seslendirmen.data.tts
 import android.content.Context
 import android.util.Log
 import com.k2fsa.sherpa.onnx.GeneratedAudio
+import com.k2fsa.sherpa.onnx.GenerationConfig
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
-import com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig
+import com.k2fsa.sherpa.onnx.OfflineTtsSupertonicModelConfig
 import com.mutkuensert.seslendirmen.domain.model.AudioData
 import com.mutkuensert.seslendirmen.domain.tts.TtsEngine
 import com.mutkuensert.seslendirmen.domain.tts.TtsEngineException
@@ -14,7 +15,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.coroutineContext
@@ -35,17 +35,18 @@ class SherpaOnnxTtsEngine @Inject constructor(
 
             try {
                 verifyModelAssets()
-                val dataDir = copyEspeakDataIfNeeded()
                 var created: OfflineTts? = null
                 val elapsedMs = measureTimeMillis {
                     val config = OfflineTtsConfig(
                         model = OfflineTtsModelConfig(
-                            vits = OfflineTtsVitsModelConfig(
-                                model = "$MODEL_ASSET_DIR/$MODEL_FILE",
-                                tokens = "$MODEL_ASSET_DIR/$TOKENS_FILE",
-                                dataDir = dataDir.absolutePath,
-                                noiseScale = 1f,
-                                noiseScaleW = 1f
+                            supertonic = OfflineTtsSupertonicModelConfig(
+                                durationPredictor = modelAsset(DURATION_PREDICTOR_FILE),
+                                textEncoder = modelAsset(TEXT_ENCODER_FILE),
+                                vectorEstimator = modelAsset(VECTOR_ESTIMATOR_FILE),
+                                vocoder = modelAsset(VOCODER_FILE),
+                                ttsJson = modelAsset(TTS_CONFIG_FILE),
+                                unicodeIndexer = modelAsset(UNICODE_INDEXER_FILE),
+                                voiceStyle = modelAsset(VOICE_STYLE_FILE),
                             ),
                             numThreads = Runtime.getRuntime().availableProcessors().coerceIn(1, 4),
                             debug = false,
@@ -75,7 +76,13 @@ class SherpaOnnxTtsEngine @Inject constructor(
             try {
                 lateinit var result: GeneratedAudio
                 val synthesisMs = measureTimeMillis {
-                    result = checkNotNull(tts).generate(text = text, sid = 0, speed = 1.0f)
+                    val generationConfig = GenerationConfig(
+                        sid = 6,
+                        speed = 0.95f,
+                        numSteps = 12,
+                        extra = mapOf("lang" to LANGUAGE_CODE),
+                    )
+                    result = checkNotNull(tts).generateWithConfig(text, generationConfig)
                 }
                 check(result.sampleRate > 0 && result.samples.isNotEmpty()) {
                     "Sherpa generated an empty audio buffer"
@@ -106,53 +113,35 @@ class SherpaOnnxTtsEngine @Inject constructor(
 
     private fun verifyModelAssets() {
         try {
-            context.assets.open("$MODEL_ASSET_DIR/$MODEL_FILE").close()
-            context.assets.open("$MODEL_ASSET_DIR/$TOKENS_FILE").close()
-            check(context.assets.list(ESPEAK_ASSET_DIR).orEmpty().isNotEmpty())
+            REQUIRED_MODEL_FILES.forEach { fileName ->
+                context.assets.open(modelAsset(fileName)).close()
+            }
         } catch (error: Throwable) {
             throw TtsEngineException(TtsEngineException.Reason.MODEL_FILES_MISSING, error)
         }
     }
 
-    private fun copyEspeakDataIfNeeded(): File {
-        val destination = File(context.filesDir, ESPEAK_ASSET_DIR)
-        val marker = File(destination, COPY_MARKER)
-        if (marker.isFile && REQUIRED_ESPEAK_FILES.all { File(destination, it).isFile }) {
-            return destination
-        }
-
-        destination.mkdirs()
-        copyAssetTree(ESPEAK_ASSET_DIR, destination)
-        check(REQUIRED_ESPEAK_FILES.all { File(destination, it).isFile }) {
-            "eSpeak data copy is incomplete"
-        }
-        marker.writeText("sherpa-onnx-1.13.8")
-        return destination
-    }
-
-    private fun copyAssetTree(assetPath: String, destination: File) {
-        val children = context.assets.list(assetPath).orEmpty()
-        if (children.isEmpty()) {
-            destination.parentFile?.mkdirs()
-            context.assets.open(assetPath).use { input ->
-                destination.outputStream().use { output -> input.copyTo(output) }
-            }
-            return
-        }
-
-        destination.mkdirs()
-        children.forEach { child ->
-            copyAssetTree("$assetPath/$child", File(destination, child))
-        }
-    }
+    private fun modelAsset(fileName: String) = "$MODEL_ASSET_DIR/$fileName"
 
     private companion object {
         const val TAG = "OfflineTurkishTts"
-        const val MODEL_ASSET_DIR = "tts/tr_TR-dfki-medium"
-        const val MODEL_FILE = "tr_TR-dfki-medium.onnx"
-        const val TOKENS_FILE = "tokens.txt"
-        const val ESPEAK_ASSET_DIR = "$MODEL_ASSET_DIR/espeak-ng-data"
-        const val COPY_MARKER = ".copy-complete"
-        val REQUIRED_ESPEAK_FILES = listOf("phontab", "phonindex", "phondata", "intonations")
+        const val LANGUAGE_CODE = "tr"
+        const val MODEL_ASSET_DIR = "tts/supertonic3"
+        const val DURATION_PREDICTOR_FILE = "duration_predictor.int8.onnx"
+        const val TEXT_ENCODER_FILE = "text_encoder.int8.onnx"
+        const val VECTOR_ESTIMATOR_FILE = "vector_estimator.int8.onnx"
+        const val VOCODER_FILE = "vocoder.int8.onnx"
+        const val TTS_CONFIG_FILE = "tts.json"
+        const val UNICODE_INDEXER_FILE = "unicode_indexer.bin"
+        const val VOICE_STYLE_FILE = "voice.bin"
+        val REQUIRED_MODEL_FILES = listOf(
+            DURATION_PREDICTOR_FILE,
+            TEXT_ENCODER_FILE,
+            VECTOR_ESTIMATOR_FILE,
+            VOCODER_FILE,
+            TTS_CONFIG_FILE,
+            UNICODE_INDEXER_FILE,
+            VOICE_STYLE_FILE,
+        )
     }
 }
