@@ -30,6 +30,13 @@ class PlaybackQueue(chunks: List<SpeechChunk>) {
         return current
     }
 
+    fun moveTo(chunkId: Long): SpeechChunk? {
+        val targetIndex = items.indexOfFirst { it.id == chunkId }
+        if (targetIndex < 0) return null
+        index = targetIndex
+        return current
+    }
+
     fun reset(): SpeechChunk? {
         index = 0
         return current

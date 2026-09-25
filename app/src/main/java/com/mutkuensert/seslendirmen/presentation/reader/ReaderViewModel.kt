@@ -3,6 +3,7 @@ package com.mutkuensert.seslendirmen.presentation.reader
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mutkuensert.seslendirmen.domain.model.PdfDocument
+import com.mutkuensert.seslendirmen.domain.model.SpeechChunk
 import com.mutkuensert.seslendirmen.domain.repository.PdfReadException
 import com.mutkuensert.seslendirmen.domain.repository.PdfExtractionProgress
 import com.mutkuensert.seslendirmen.domain.repository.SpeechChunker
@@ -27,9 +28,11 @@ class ReaderViewModel @Inject constructor(
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
     val playbackState = playbackController.state
     private var loadingJob: Job? = null
+    private var chunks: List<SpeechChunk> = emptyList()
 
     fun openDocument(uri: String) {
         loadingJob?.cancel()
+        chunks = emptyList()
         playbackController.load(emptyList())
         loadingJob = viewModelScope.launch {
             _uiState.value = ReaderUiState.Loading()
@@ -37,7 +40,7 @@ class ReaderViewModel @Inject constructor(
                 val document = openPdfDocument(uri) { progress ->
                     _uiState.value = ReaderUiState.Loading(progress)
                 }
-                val chunks = speechChunker.createChunks(document)
+                chunks = speechChunker.createChunks(document)
                 playbackController.load(chunks)
                 _uiState.value = ReaderUiState.Content(document, chunks.size)
             } catch (cancelled: CancellationException) {
@@ -55,6 +58,13 @@ class ReaderViewModel @Inject constructor(
     fun stop() = playbackController.stop()
     fun next() = playbackController.next()
     fun previous() = playbackController.previous()
+
+    fun playFromParagraph(pageNumber: Int, paragraphIndex: Int) {
+        val firstChunk = chunks.firstOrNull {
+            it.pageNumber == pageNumber && it.paragraphIndex == paragraphIndex
+        } ?: return
+        playbackController.playFrom(firstChunk.id)
+    }
 }
 
 sealed interface ReaderUiState {

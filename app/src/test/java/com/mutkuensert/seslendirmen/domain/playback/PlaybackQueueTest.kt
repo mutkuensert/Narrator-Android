@@ -42,6 +42,23 @@ class PlaybackQueueTest {
     }
 
     @Test
+    fun `moves directly to chunk by id`() {
+        val queue = PlaybackQueue(chunks)
+
+        assertEquals(2L, queue.moveTo(2L)?.id)
+        assertEquals(2, queue.currentIndex)
+    }
+
+    @Test
+    fun `unknown chunk id leaves current position unchanged`() {
+        val queue = PlaybackQueue(chunks)
+        queue.moveNext()
+
+        assertNull(queue.moveTo(99L))
+        assertEquals(1L, queue.current?.id)
+    }
+
+    @Test
     fun `empty queue remains safe`() {
         val queue = PlaybackQueue(emptyList())
 

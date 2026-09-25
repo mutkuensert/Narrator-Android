@@ -137,6 +137,11 @@ class BufferedTtsPlaybackController @Inject constructor(
         if (canMove) startPlaybackAtCurrent()
     }
 
+    override fun playFrom(chunkId: Long) {
+        val canMove = synchronized(lock) { queue.moveTo(chunkId) != null }
+        if (canMove) startPlaybackAtCurrent()
+    }
+
     private fun startPlaybackAtCurrent() {
         val oldJob: Job?
         val version: Long

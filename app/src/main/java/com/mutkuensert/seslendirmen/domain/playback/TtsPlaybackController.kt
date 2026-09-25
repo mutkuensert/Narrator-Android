@@ -11,5 +11,6 @@ interface TtsPlaybackController {
     fun stop()
     fun next()
     fun previous()
+    fun playFrom(chunkId: Long)
     fun release()
 }

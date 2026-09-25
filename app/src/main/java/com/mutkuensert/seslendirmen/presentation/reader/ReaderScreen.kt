@@ -3,6 +3,7 @@ package com.mutkuensert.seslendirmen.presentation.reader
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -53,6 +54,7 @@ fun ReaderRoute(viewModel: ReaderViewModel) {
         onStop = viewModel::stop,
         onPrevious = viewModel::previous,
         onNext = viewModel::next,
+        onParagraphClick = viewModel::playFromParagraph,
     )
 }
 
@@ -67,6 +69,7 @@ private fun ReaderScreen(
     onStop: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onParagraphClick: (pageNumber: Int, paragraphIndex: Int) -> Unit,
 ) {
     val title = (state as? ReaderUiState.Content)?.document?.title ?: "Seslendirmen"
     Scaffold(
@@ -108,6 +111,7 @@ private fun ReaderScreen(
                 is ReaderUiState.Content -> DocumentText(
                     document = state.document,
                     activeChunk = playbackState.activeChunk(),
+                    onParagraphClick = onParagraphClick,
                 )
                 is ReaderUiState.Error -> ErrorDocument(state.message, onSelectPdf)
             }
@@ -252,7 +256,11 @@ private fun ErrorDocument(message: String, onSelectPdf: () -> Unit) {
 }
 
 @Composable
-private fun DocumentText(document: PdfDocument, activeChunk: SpeechChunk?) {
+private fun DocumentText(
+    document: PdfDocument,
+    activeChunk: SpeechChunk?,
+    onParagraphClick: (pageNumber: Int, paragraphIndex: Int) -> Unit,
+) {
     val listState = rememberLazyListState()
     LaunchedEffect(activeChunk?.id) {
         val targetIndex = activeChunk?.let { ReaderPositionMapper.lazyListIndex(document, it) }
@@ -291,7 +299,11 @@ private fun DocumentText(document: PdfDocument, activeChunk: SpeechChunk?) {
                 val isActive = activeChunk?.pageNumber == page.pageNumber &&
                     activeChunk.paragraphIndex == paragraphIndex
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onParagraphClick(page.pageNumber, paragraphIndex)
+                        },
                     color = if (isActive) {
                         MaterialTheme.colorScheme.secondaryContainer
                     } else {
