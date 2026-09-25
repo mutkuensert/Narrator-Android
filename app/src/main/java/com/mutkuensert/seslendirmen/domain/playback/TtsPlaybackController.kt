@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface TtsPlaybackController {
     val state: StateFlow<PlaybackState>
-    fun load(chunks: List<SpeechChunk>)
+    fun load(chunks: List<SpeechChunk>, initialChunkId: Long? = null)
     fun play()
     fun pause()
     fun stop()

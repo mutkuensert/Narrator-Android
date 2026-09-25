@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +40,7 @@ import com.mutkuensert.seslendirmen.domain.model.PdfDocument
 import com.mutkuensert.seslendirmen.domain.model.SpeechChunk
 import com.mutkuensert.seslendirmen.domain.playback.PlaybackState
 import com.mutkuensert.seslendirmen.domain.repository.PdfExtractionProgress
+import kotlinx.coroutines.launch
 
 @Composable
 fun ReaderRoute(viewModel: ReaderViewModel) {
@@ -55,6 +59,7 @@ fun ReaderRoute(viewModel: ReaderViewModel) {
         onPrevious = viewModel::previous,
         onNext = viewModel::next,
         onParagraphClick = viewModel::playFromParagraph,
+        onDismissShorterDocumentWarning = viewModel::dismissShorterDocumentWarning,
     )
 }
 
@@ -70,8 +75,27 @@ private fun ReaderScreen(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onParagraphClick: (pageNumber: Int, paragraphIndex: Int) -> Unit,
+    onDismissShorterDocumentWarning: () -> Unit,
 ) {
     val title = (state as? ReaderUiState.Content)?.document?.title ?: "Seslendirmen"
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    if (state is ReaderUiState.Content && state.showShorterDocumentWarning) {
+        AlertDialog(
+            onDismissRequest = onDismissShorterDocumentWarning,
+            title = { Text("Kayıtlı konum kullanılamadı") },
+            text = {
+                Text(
+                    "Aynı isimli bu belge, daha önce açılan belgeden daha kısa. " +
+                        "Eski konum uygulanmadı. Bundan sonra bu belgede son okuduğunuz yer " +
+                        "kaydedilecek.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = onDismissShorterDocumentWarning) { Text("Tamam") }
+            },
+        )
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -91,9 +115,13 @@ private fun ReaderScreen(
                 PlaybackControls(
                     state = playbackState,
                     chunkCount = state.chunkCount,
+                    restoredChunk = state.restoredChunk,
                     onPlay = onPlay,
                     onPause = onPause,
-                    onStop = onStop,
+                    onStop = {
+                        onStop()
+                        coroutineScope.launch { listState.scrollToItem(0) }
+                    },
                     onPrevious = onPrevious,
                     onNext = onNext,
                 )
@@ -110,7 +138,8 @@ private fun ReaderScreen(
                 is ReaderUiState.Loading -> LoadingDocument(state.progress)
                 is ReaderUiState.Content -> DocumentText(
                     document = state.document,
-                    activeChunk = playbackState.activeChunk(),
+                    activeChunk = playbackState.activeChunk() ?: state.restoredChunk,
+                    listState = listState,
                     onParagraphClick = onParagraphClick,
                 )
                 is ReaderUiState.Error -> ErrorDocument(state.message, onSelectPdf)
@@ -123,6 +152,7 @@ private fun ReaderScreen(
 private fun PlaybackControls(
     state: PlaybackState,
     chunkCount: Int,
+    restoredChunk: SpeechChunk?,
     onPlay: () -> Unit,
     onPause: () -> Unit,
     onStop: () -> Unit,
@@ -137,7 +167,7 @@ private fun PlaybackControls(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val activeChunk = state.activeChunk()
+            val activeChunk = state.activeChunk() ?: restoredChunk
             when (state) {
                 is PlaybackState.Preparing -> Text(
                     "Ses hazırlanıyor • Bölüm ${state.chunk.id + 1}/$chunkCount • " +
@@ -155,7 +185,12 @@ private fun PlaybackControls(
                     state.error.message,
                     color = MaterialTheme.colorScheme.error,
                 )
-                PlaybackState.Idle -> Text("$chunkCount konuşma bölümü hazır")
+                PlaybackState.Idle -> Text(
+                    restoredChunk?.let {
+                        "Kaldığınız yer hazır • Bölüm ${it.id + 1}/$chunkCount • " +
+                            "Sayfa ${it.pageNumber}"
+                    } ?: "$chunkCount konuşma bölümü hazır",
+                )
             }
             activeChunk?.let { chunk ->
                 Text(
@@ -190,7 +225,7 @@ private fun PlaybackControls(
                     Text("İleri")
                 }
                 TextButton(onClick = onStop, enabled = state !is PlaybackState.Idle) {
-                    Text("Durdur")
+                    Text("Başa al")
                 }
             }
         }
@@ -259,9 +294,9 @@ private fun ErrorDocument(message: String, onSelectPdf: () -> Unit) {
 private fun DocumentText(
     document: PdfDocument,
     activeChunk: SpeechChunk?,
+    listState: LazyListState,
     onParagraphClick: (pageNumber: Int, paragraphIndex: Int) -> Unit,
 ) {
-    val listState = rememberLazyListState()
     LaunchedEffect(activeChunk?.id) {
         val targetIndex = activeChunk?.let { ReaderPositionMapper.lazyListIndex(document, it) }
         if (targetIndex != null) listState.animateScrollToItem(targetIndex)

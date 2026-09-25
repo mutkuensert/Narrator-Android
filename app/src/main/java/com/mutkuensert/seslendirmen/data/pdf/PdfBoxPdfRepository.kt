@@ -127,12 +127,13 @@ class PdfBoxPdfRepository @Inject constructor(
                         throw PdfReadException(PdfReadException.Reason.NO_EXTRACTABLE_TEXT)
                     }
 
+                    val fileName = queryDisplayName(documentUri)
                     val title = pdf.documentInformation.title
                         ?.trim()
                         ?.takeIf(String::isNotEmpty)
-                        ?: queryDisplayName(documentUri)?.removeSuffix(".pdf")
+                        ?: fileName?.removeSuffix(".pdf")
                     Log.i(TAG, "Extracted ${pages.size} pages in $elapsedMs ms from $title")
-                    PdfDocument(title = title, pages = pages)
+                    PdfDocument(title = title, pages = pages, fileName = fileName)
                 }
             }
         } catch (error: PdfReadException) {

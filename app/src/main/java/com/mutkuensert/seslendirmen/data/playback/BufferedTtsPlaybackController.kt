@@ -46,7 +46,7 @@ class BufferedTtsPlaybackController @Inject constructor(
     private val audioCache = LinkedHashMap<Int, AudioData>(MAX_BUFFERED_CHUNKS, 0.75f, true)
     private val pendingSynthesis = mutableMapOf<Int, Deferred<AudioData>>()
 
-    override fun load(chunks: List<SpeechChunk>) {
+    override fun load(chunks: List<SpeechChunk>, initialChunkId: Long?) {
         val jobsToCancel: List<Job>
         val version: Long
         synchronized(lock) {
@@ -63,6 +63,7 @@ class BufferedTtsPlaybackController @Inject constructor(
             pendingSynthesis.clear()
             audioCache.clear()
             queue = PlaybackQueue(chunks)
+            initialChunkId?.let(queue::moveTo)
             _state.value = PlaybackState.Idle
         }
         jobsToCancel.forEach(Job::cancel)
@@ -70,9 +71,10 @@ class BufferedTtsPlaybackController @Inject constructor(
 
         if (chunks.isNotEmpty()) {
             val job = scope.launch(start = CoroutineStart.LAZY) {
+                val initialIndex = synchronized(lock) { queue.currentIndex }
                 runCatching {
-                    audioFor(index = 0, expectedDocumentVersion = version)
-                    prefetch(index = 1, expectedDocumentVersion = version)
+                    audioFor(index = initialIndex, expectedDocumentVersion = version)
+                    prefetch(index = initialIndex + 1, expectedDocumentVersion = version)
                 }
             }
             synchronized(lock) {

@@ -2,8 +2,11 @@ package com.mutkuensert.seslendirmen.presentation.reader
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mutkuensert.seslendirmen.data.preferences.LastReadPositionStore
+import com.mutkuensert.seslendirmen.domain.model.LastReadPosition
 import com.mutkuensert.seslendirmen.domain.model.PdfDocument
 import com.mutkuensert.seslendirmen.domain.model.SpeechChunk
+import com.mutkuensert.seslendirmen.domain.playback.PlaybackState
 import com.mutkuensert.seslendirmen.domain.repository.PdfReadException
 import com.mutkuensert.seslendirmen.domain.repository.PdfExtractionProgress
 import com.mutkuensert.seslendirmen.domain.repository.SpeechChunker
@@ -23,16 +26,35 @@ class ReaderViewModel @Inject constructor(
     private val openPdfDocument: OpenPdfDocument,
     private val speechChunker: SpeechChunker,
     private val playbackController: TtsPlaybackController,
+    private val lastReadPositionStore: LastReadPositionStore,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Empty)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
     val playbackState = playbackController.state
     private var loadingJob: Job? = null
     private var chunks: List<SpeechChunk> = emptyList()
+    private var currentFileName: String? = null
+
+    init {
+        viewModelScope.launch {
+            playbackState.collect { state ->
+                val chunk = state.activeChunk() ?: return@collect
+                val fileName = currentFileName ?: return@collect
+                lastReadPositionStore.save(
+                    LastReadPosition(fileName, chunk.id, chunks.size),
+                )
+                val content = _uiState.value as? ReaderUiState.Content ?: return@collect
+                if (content.restoredChunk?.id != chunk.id) {
+                    _uiState.value = content.copy(restoredChunk = chunk)
+                }
+            }
+        }
+    }
 
     fun openDocument(uri: String) {
         loadingJob?.cancel()
         chunks = emptyList()
+        currentFileName = null
         playbackController.load(emptyList())
         loadingJob = viewModelScope.launch {
             _uiState.value = ReaderUiState.Loading()
@@ -41,8 +63,23 @@ class ReaderViewModel @Inject constructor(
                     _uiState.value = ReaderUiState.Loading(progress)
                 }
                 chunks = speechChunker.createChunks(document)
-                playbackController.load(chunks)
-                _uiState.value = ReaderUiState.Content(document, chunks.size)
+                currentFileName = document.fileName ?: document.title
+                val savedPosition = currentFileName?.let(lastReadPositionStore::read)
+                val openedFileIsShorter = savedPosition != null &&
+                    savedPosition.chunkCount > chunks.size
+                val restoredChunk = if (openedFileIsShorter) {
+                    lastReadPositionStore.clear(savedPosition.fileName)
+                    null
+                } else {
+                    savedPosition?.let { saved -> chunks.firstOrNull { it.id == saved.chunkId } }
+                }
+                playbackController.load(chunks, restoredChunk?.id)
+                _uiState.value = ReaderUiState.Content(
+                    document = document,
+                    chunkCount = chunks.size,
+                    restoredChunk = restoredChunk,
+                    showShorterDocumentWarning = openedFileIsShorter,
+                )
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
@@ -59,6 +96,11 @@ class ReaderViewModel @Inject constructor(
     fun next() = playbackController.next()
     fun previous() = playbackController.previous()
 
+    fun dismissShorterDocumentWarning() {
+        val content = _uiState.value as? ReaderUiState.Content ?: return
+        _uiState.value = content.copy(showShorterDocumentWarning = false)
+    }
+
     fun playFromParagraph(pageNumber: Int, paragraphIndex: Int) {
         val firstChunk = chunks.firstOrNull {
             it.pageNumber == pageNumber && it.paragraphIndex == paragraphIndex
@@ -67,9 +109,21 @@ class ReaderViewModel @Inject constructor(
     }
 }
 
+private fun PlaybackState.activeChunk(): SpeechChunk? = when (this) {
+    is PlaybackState.Preparing -> chunk
+    is PlaybackState.Playing -> chunk
+    is PlaybackState.Paused -> chunk
+    is PlaybackState.Error, PlaybackState.Idle -> null
+}
+
 sealed interface ReaderUiState {
     data object Empty : ReaderUiState
     data class Loading(val progress: PdfExtractionProgress? = null) : ReaderUiState
-    data class Content(val document: PdfDocument, val chunkCount: Int) : ReaderUiState
+    data class Content(
+        val document: PdfDocument,
+        val chunkCount: Int,
+        val restoredChunk: SpeechChunk? = null,
+        val showShorterDocumentWarning: Boolean = false,
+    ) : ReaderUiState
     data class Error(val message: String) : ReaderUiState
 }
