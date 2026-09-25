@@ -3,6 +3,7 @@ package com.mutkuensert.seslendirmen.presentation.reader
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mutkuensert.seslendirmen.data.preferences.LastReadPositionStore
+import com.mutkuensert.seslendirmen.data.preferences.TtsPreferences
 import com.mutkuensert.seslendirmen.domain.model.LastReadPosition
 import com.mutkuensert.seslendirmen.domain.model.PdfDocument
 import com.mutkuensert.seslendirmen.domain.model.SpeechChunk
@@ -27,10 +28,13 @@ class ReaderViewModel @Inject constructor(
     private val speechChunker: SpeechChunker,
     private val playbackController: TtsPlaybackController,
     private val lastReadPositionStore: LastReadPositionStore,
+    private val ttsPreferences: TtsPreferences,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Empty)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
     val playbackState = playbackController.state
+    private val _numSteps = MutableStateFlow(ttsPreferences.readNumSteps())
+    val numSteps: StateFlow<Int> = _numSteps.asStateFlow()
     private var loadingJob: Job? = null
     private var chunks: List<SpeechChunk> = emptyList()
     private var currentFileName: String? = null
@@ -95,6 +99,20 @@ class ReaderViewModel @Inject constructor(
     fun stop() = playbackController.stop()
     fun next() = playbackController.next()
     fun previous() = playbackController.previous()
+
+    fun setNumSteps(value: Int) {
+        val newValue = value.coerceIn(TtsPreferences.MIN_NUM_STEPS, TtsPreferences.MAX_NUM_STEPS)
+        if (newValue == _numSteps.value) return
+        ttsPreferences.saveNumSteps(newValue)
+        _numSteps.value = newValue
+
+        // Clear audio created with the old setting while preserving the reading position.
+        if (chunks.isNotEmpty()) {
+            val currentChunkId = playbackState.value.activeChunk()?.id
+                ?: (_uiState.value as? ReaderUiState.Content)?.restoredChunk?.id
+            playbackController.load(chunks, currentChunkId)
+        }
+    }
 
     fun dismissShorterDocumentWarning() {
         val content = _uiState.value as? ReaderUiState.Content ?: return

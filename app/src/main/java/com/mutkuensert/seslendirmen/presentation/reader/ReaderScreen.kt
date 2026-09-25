@@ -23,6 +23,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,6 +32,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,18 +46,21 @@ import com.mutkuensert.seslendirmen.domain.model.PdfDocument
 import com.mutkuensert.seslendirmen.domain.model.SpeechChunk
 import com.mutkuensert.seslendirmen.domain.playback.PlaybackState
 import com.mutkuensert.seslendirmen.domain.repository.PdfExtractionProgress
+import com.mutkuensert.seslendirmen.data.preferences.TtsPreferences
 import kotlinx.coroutines.launch
 
 @Composable
 fun ReaderRoute(viewModel: ReaderViewModel) {
     val state by viewModel.uiState.collectAsState()
     val playbackState by viewModel.playbackState.collectAsState()
+    val numSteps by viewModel.numSteps.collectAsState()
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.openDocument(it.toString()) }
     }
     ReaderScreen(
         state = state,
         playbackState = playbackState,
+        numSteps = numSteps,
         onSelectPdf = { picker.launch(arrayOf(PDF_MIME_TYPE)) },
         onPlay = viewModel::play,
         onPause = viewModel::pause,
@@ -60,6 +69,7 @@ fun ReaderRoute(viewModel: ReaderViewModel) {
         onNext = viewModel::next,
         onParagraphClick = viewModel::playFromParagraph,
         onDismissShorterDocumentWarning = viewModel::dismissShorterDocumentWarning,
+        onNumStepsChanged = viewModel::setNumSteps,
     )
 }
 
@@ -68,6 +78,7 @@ fun ReaderRoute(viewModel: ReaderViewModel) {
 private fun ReaderScreen(
     state: ReaderUiState,
     playbackState: PlaybackState,
+    numSteps: Int,
     onSelectPdf: () -> Unit,
     onPlay: () -> Unit,
     onPause: () -> Unit,
@@ -76,10 +87,12 @@ private fun ReaderScreen(
     onNext: () -> Unit,
     onParagraphClick: (pageNumber: Int, paragraphIndex: Int) -> Unit,
     onDismissShorterDocumentWarning: () -> Unit,
+    onNumStepsChanged: (Int) -> Unit,
 ) {
     val title = (state as? ReaderUiState.Content)?.document?.title ?: "Seslendirmen"
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    var showQualityDialog by rememberSaveable { mutableStateOf(false) }
     if (state is ReaderUiState.Content && state.showShorterDocumentWarning) {
         AlertDialog(
             onDismissRequest = onDismissShorterDocumentWarning,
@@ -96,11 +109,24 @@ private fun ReaderScreen(
             },
         )
     }
+    if (showQualityDialog) {
+        QualityDialog(
+            currentNumSteps = numSteps,
+            onConfirm = {
+                onNumStepsChanged(it)
+                showQualityDialog = false
+            },
+            onDismiss = { showQualityDialog = false },
+        )
+    }
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(title, maxLines = 1) },
                 actions = {
+                    TextButton(onClick = { showQualityDialog = true }) {
+                        Text("Kalite: $numSteps")
+                    }
                     Button(
                         onClick = onSelectPdf,
                         modifier = Modifier.padding(end = 8.dp),
@@ -146,6 +172,49 @@ private fun ReaderScreen(
             }
         }
     }
+}
+
+@Composable
+private fun QualityDialog(
+    currentNumSteps: Int,
+    onConfirm: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selectedSteps by remember(currentNumSteps) { mutableFloatStateOf(currentNumSteps.toFloat()) }
+    val steps = selectedSteps.toInt()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Okuma kalitesi") },
+        text = {
+            Column {
+                Text("Adım sayısı: $steps")
+                Text(
+                    text = "Yüksek değer daha kaliteli ses üretebilir, ancak hazırlanması daha uzun sürer.",
+                    modifier = Modifier.padding(top = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Slider(
+                    value = selectedSteps,
+                    onValueChange = { selectedSteps = it },
+                    valueRange = TtsPreferences.MIN_NUM_STEPS.toFloat()..
+                        TtsPreferences.MAX_NUM_STEPS.toFloat(),
+                    steps = TtsPreferences.MAX_NUM_STEPS - TtsPreferences.MIN_NUM_STEPS - 1,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Hızlı", style = MaterialTheme.typography.labelSmall)
+                    Text("Kaliteli", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(steps) }) { Text("Uygula") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("İptal") }
+        },
+    )
 }
 
 @Composable

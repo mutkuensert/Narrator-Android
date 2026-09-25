@@ -8,6 +8,7 @@ import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsSupertonicModelConfig
+import com.mutkuensert.seslendirmen.data.preferences.TtsPreferences
 import com.mutkuensert.seslendirmen.domain.model.AudioData
 import com.mutkuensert.seslendirmen.domain.tts.TtsEngine
 import com.mutkuensert.seslendirmen.domain.tts.TtsEngineException
@@ -24,6 +25,7 @@ import kotlin.system.measureTimeMillis
 @Singleton
 class SherpaOnnxTtsEngine @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val preferences: TtsPreferences,
 ) : TtsEngine {
     private val lock = Any()
     private var tts: OfflineTts? = null
@@ -79,7 +81,7 @@ class SherpaOnnxTtsEngine @Inject constructor(
                     val generationConfig = GenerationConfig(
                         sid = 6,
                         speed = 1f,
-                        numSteps = 15,
+                        numSteps = preferences.readNumSteps(),
                         extra = mapOf("lang" to LANGUAGE_CODE),
                     )
                     result = checkNotNull(tts).generateWithConfig(text, generationConfig)
