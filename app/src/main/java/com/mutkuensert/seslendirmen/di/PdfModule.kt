@@ -2,6 +2,8 @@ package com.mutkuensert.seslendirmen.di
 
 import com.mutkuensert.seslendirmen.data.pdf.ConservativeTextPreprocessor
 import com.mutkuensert.seslendirmen.data.pdf.PdfBoxPdfRepository
+import com.mutkuensert.seslendirmen.data.pdf.MlKitOcrEngine
+import com.mutkuensert.seslendirmen.data.pdf.OcrEngine
 import com.mutkuensert.seslendirmen.domain.repository.PdfRepository
 import com.mutkuensert.seslendirmen.domain.repository.TextPreprocessor
 import dagger.Binds
@@ -22,4 +24,8 @@ abstract class PdfModule {
     abstract fun bindTextPreprocessor(
         implementation: ConservativeTextPreprocessor,
     ): TextPreprocessor
+
+    @Binds
+    @Singleton
+    abstract fun bindOcrEngine(implementation: MlKitOcrEngine): OcrEngine
 }

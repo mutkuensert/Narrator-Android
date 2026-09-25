@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.mutkuensert.seslendirmen.domain.model.PdfDocument
 import com.mutkuensert.seslendirmen.domain.model.SpeechChunk
 import com.mutkuensert.seslendirmen.domain.playback.PlaybackState
+import com.mutkuensert.seslendirmen.domain.repository.PdfExtractionProgress
 
 @Composable
 fun ReaderRoute(viewModel: ReaderViewModel) {
@@ -103,7 +104,7 @@ private fun ReaderScreen(
         ) {
             when (state) {
                 ReaderUiState.Empty -> EmptyDocument(onSelectPdf)
-                ReaderUiState.Loading -> LoadingDocument()
+                is ReaderUiState.Loading -> LoadingDocument(state.progress)
                 is ReaderUiState.Content -> DocumentText(
                     document = state.document,
                     activeChunk = playbackState.activeChunk(),
@@ -202,11 +203,11 @@ private fun EmptyDocument(onSelectPdf: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Dinlemek istediğiniz metin tabanlı PDF belgesini seçin.",
+            text = "Dinlemek istediğiniz PDF belgesini seçin.",
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
-            text = "Taranmış ve yalnızca görüntü içeren belgeler henüz desteklenmiyor.",
+            text = "Metin tabanlı ve taranmış PDF belgeleri otomatik olarak işlenir.",
             modifier = Modifier.padding(top = 8.dp, bottom = 20.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -216,14 +217,21 @@ private fun EmptyDocument(onSelectPdf: () -> Unit) {
 }
 
 @Composable
-private fun LoadingDocument() {
+private fun LoadingDocument(progress: PdfExtractionProgress?) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         CircularProgressIndicator()
-        Text("PDF metni çıkarılıyor…", modifier = Modifier.padding(top = 16.dp))
+        val message = when (progress?.stage) {
+            PdfExtractionProgress.Stage.EXTRACTING_TEXT ->
+                "Sayfa ${progress.pageNumber}/${progress.pageCount} okunuyor…"
+            PdfExtractionProgress.Stage.RECOGNIZING_SCAN ->
+                "Sayfa ${progress.pageNumber}/${progress.pageCount} taranmış metin olarak tanınıyor…"
+            null -> "PDF hazırlanıyor…"
+        }
+        Text(message, modifier = Modifier.padding(top = 16.dp))
     }
 }
 

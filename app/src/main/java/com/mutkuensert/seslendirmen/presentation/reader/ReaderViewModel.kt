@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mutkuensert.seslendirmen.domain.model.PdfDocument
 import com.mutkuensert.seslendirmen.domain.repository.PdfReadException
+import com.mutkuensert.seslendirmen.domain.repository.PdfExtractionProgress
 import com.mutkuensert.seslendirmen.domain.repository.SpeechChunker
 import com.mutkuensert.seslendirmen.domain.playback.TtsPlaybackController
 import com.mutkuensert.seslendirmen.domain.usecase.OpenPdfDocument
@@ -31,9 +32,11 @@ class ReaderViewModel @Inject constructor(
         loadingJob?.cancel()
         playbackController.load(emptyList())
         loadingJob = viewModelScope.launch {
-            _uiState.value = ReaderUiState.Loading
+            _uiState.value = ReaderUiState.Loading()
             try {
-                val document = openPdfDocument(uri)
+                val document = openPdfDocument(uri) { progress ->
+                    _uiState.value = ReaderUiState.Loading(progress)
+                }
                 val chunks = speechChunker.createChunks(document)
                 playbackController.load(chunks)
                 _uiState.value = ReaderUiState.Content(document, chunks.size)
@@ -56,7 +59,7 @@ class ReaderViewModel @Inject constructor(
 
 sealed interface ReaderUiState {
     data object Empty : ReaderUiState
-    data object Loading : ReaderUiState
+    data class Loading(val progress: PdfExtractionProgress? = null) : ReaderUiState
     data class Content(val document: PdfDocument, val chunkCount: Int) : ReaderUiState
     data class Error(val message: String) : ReaderUiState
 }
