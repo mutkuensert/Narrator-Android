@@ -20,4 +20,5 @@ abstract class TtsModule {
     @Binds
     @Singleton
     abstract fun bindAudioPlayer(implementation: AudioTrackPlayer): AudioPlayer
+
 }
