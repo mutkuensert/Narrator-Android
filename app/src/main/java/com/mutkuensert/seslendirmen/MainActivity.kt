@@ -8,16 +8,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
-import com.mutkuensert.seslendirmen.presentation.reader.ReaderRoute
-import com.mutkuensert.seslendirmen.presentation.reader.ReaderViewModel
-import com.mutkuensert.seslendirmen.ui.theme.SeslendirmenTheme
+import com.mutkuensert.seslendirmen.feature.reader.presentation.reader.ReaderScreen
+import com.mutkuensert.seslendirmen.core.ui.theme.SeslendirmenTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private val viewModel: ReaderViewModel by viewModels()
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { }
@@ -28,7 +25,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             SeslendirmenTheme {
-                ReaderRoute(viewModel = viewModel)
+                ReaderScreen()
             }
         }
     }
