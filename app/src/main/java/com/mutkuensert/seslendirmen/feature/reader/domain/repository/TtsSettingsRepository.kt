@@ -1,8 +1,12 @@
 package com.mutkuensert.seslendirmen.feature.reader.domain.repository
 
+import com.mutkuensert.seslendirmen.feature.reader.domain.model.TtsLanguage
+
 interface TtsSettingsRepository {
     fun readNumSteps(): Int
     fun saveNumSteps(value: Int)
+    fun readLanguage(): TtsLanguage
+    fun saveLanguage(language: TtsLanguage)
 }
 
 object TtsQuality {

@@ -82,7 +82,7 @@ class SherpaOnnxTtsEngine @Inject constructor(
                         sid = 6,
                         speed = 1f,
                         numSteps = settingsRepository.readNumSteps(),
-                        extra = mapOf("lang" to LANGUAGE_CODE),
+                        extra = mapOf("lang" to settingsRepository.readLanguage().code),
                     )
                     result = checkNotNull(tts).generateWithConfig(text, generationConfig)
                 }
@@ -126,8 +126,7 @@ class SherpaOnnxTtsEngine @Inject constructor(
     private fun modelAsset(fileName: String) = "$MODEL_ASSET_DIR/$fileName"
 
     private companion object {
-        const val TAG = "OfflineTurkishTts"
-        const val LANGUAGE_CODE = "tr"
+        const val TAG = "OfflineTts"
         const val MODEL_ASSET_DIR = "tts/supertonic3"
         const val DURATION_PREDICTOR_FILE = "duration_predictor.int8.onnx"
         const val TEXT_ENCODER_FILE = "text_encoder.int8.onnx"

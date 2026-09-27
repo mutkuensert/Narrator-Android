@@ -2,6 +2,7 @@ package com.mutkuensert.seslendirmen.feature.reader.data.tts
 
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.Document
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.SpeechChunk
+import com.mutkuensert.seslendirmen.feature.reader.domain.model.TtsLanguage
 import com.mutkuensert.seslendirmen.feature.reader.domain.repository.SpeechChunker
 import java.text.BreakIterator
 import java.util.Locale
@@ -9,13 +10,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class TurkishSentenceChunker @Inject constructor() : SpeechChunker {
-    override fun createChunks(document: Document): List<SpeechChunk> {
+class LocaleSentenceChunker @Inject constructor() : SpeechChunker {
+    override fun createChunks(document: Document, language: TtsLanguage): List<SpeechChunk> {
         var nextId = 0L
         return buildList {
             document.sections.forEach { section ->
                 section.paragraphs.forEachIndexed { paragraphIndex, paragraph ->
-                    splitParagraph(paragraph.text).forEach { text ->
+                    splitParagraph(paragraph.text, language).forEach { text ->
                         add(
                             SpeechChunk(
                                 id = nextId++,
@@ -30,8 +31,10 @@ class TurkishSentenceChunker @Inject constructor() : SpeechChunker {
         }
     }
 
-    private fun splitParagraph(text: String): List<String> {
-        val sentenceIterator = BreakIterator.getSentenceInstance(TURKISH_LOCALE)
+    private fun splitParagraph(text: String, language: TtsLanguage): List<String> {
+        val sentenceIterator = BreakIterator.getSentenceInstance(
+            Locale.forLanguageTag(language.localeTag),
+        )
         sentenceIterator.setText(text)
         val sentences = mutableListOf<String>()
         var start = sentenceIterator.first()
@@ -73,6 +76,6 @@ class TurkishSentenceChunker @Inject constructor() : SpeechChunker {
     private companion object {
         const val MAX_CHARS = 280
         val SAFE_BOUNDARIES = charArrayOf('.', '!', '?', ';', ':', ',', ' ')
-        val TURKISH_LOCALE: Locale = Locale.forLanguageTag("tr-TR")
     }
 }
+

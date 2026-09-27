@@ -31,6 +31,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -49,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,6 +64,7 @@ import com.mutkuensert.seslendirmen.feature.reader.domain.model.DocumentFormat
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.LastReadPosition
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.LegalDocumentType
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.SpeechChunk
+import com.mutkuensert.seslendirmen.feature.reader.domain.model.TtsLanguage
 import com.mutkuensert.seslendirmen.feature.reader.domain.playback.PlaybackState
 import com.mutkuensert.seslendirmen.feature.reader.domain.playback.PlaybackError
 import com.mutkuensert.seslendirmen.feature.reader.domain.repository.DocumentExtractionProgress
@@ -75,6 +78,7 @@ fun ReaderScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val numSteps by viewModel.numSteps.collectAsStateWithLifecycle()
+    val ttsLanguage by viewModel.ttsLanguage.collectAsStateWithLifecycle()
     val savedPositions by viewModel.savedPositions.collectAsStateWithLifecycle()
     val legalDocumentState by viewModel.legalDocumentState.collectAsStateWithLifecycle()
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -84,6 +88,7 @@ fun ReaderScreen(
         state = state,
         playbackState = playbackState,
         numSteps = numSteps,
+        ttsLanguage = ttsLanguage,
         savedPositions = savedPositions,
         legalDocumentState = legalDocumentState,
         onSelectDocument = { picker.launch(SUPPORTED_MIME_TYPES) },
@@ -95,6 +100,7 @@ fun ReaderScreen(
         onParagraphClick = viewModel::handlePlayFromParagraph,
         onDismissShorterDocumentWarning = viewModel::handleDismissShorterDocumentWarning,
         onNumStepsChanged = viewModel::handleNumStepsChanged,
+        onTtsLanguageChanged = viewModel::handleTtsLanguageChanged,
         onDeleteSavedPosition = viewModel::handleClearSavedPosition,
         onLegalDocumentSelected = viewModel::handleLegalDocumentSelected,
     )
@@ -106,6 +112,7 @@ private fun ReaderContent(
     state: ReaderUiState,
     playbackState: PlaybackState,
     numSteps: Int,
+    ttsLanguage: TtsLanguage,
     savedPositions: List<LastReadPosition>,
     legalDocumentState: LegalDocumentUiState,
     onSelectDocument: () -> Unit,
@@ -117,6 +124,7 @@ private fun ReaderContent(
     onParagraphClick: (sectionIndex: Int, paragraphIndex: Int) -> Unit,
     onDismissShorterDocumentWarning: () -> Unit,
     onNumStepsChanged: (Int) -> Unit,
+    onTtsLanguageChanged: (TtsLanguage) -> Unit,
     onDeleteSavedPosition: (String) -> Unit,
     onLegalDocumentSelected: (LegalDocumentType) -> Unit,
 ) {
@@ -125,6 +133,7 @@ private fun ReaderContent(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var showQualityDialog by rememberSaveable { mutableStateOf(false) }
+    var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
     var showLegalDialog by rememberSaveable { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var pendingPositionDeletion by rememberSaveable { mutableStateOf<String?>(null) }
@@ -153,6 +162,16 @@ private fun ReaderContent(
                 showQualityDialog = false
             },
             onDismiss = { showQualityDialog = false },
+        )
+    }
+    if (showLanguageDialog) {
+        TtsLanguageDialog(
+            selectedLanguage = ttsLanguage,
+            onSelect = {
+                onTtsLanguageChanged(it)
+                showLanguageDialog = false
+            },
+            onDismiss = { showLanguageDialog = false },
         )
     }
     if (showLegalDialog) {
@@ -236,8 +255,10 @@ private fun ReaderContent(
             if (showSettings) {
                 SettingsScreen(
                     numSteps = numSteps,
+                    ttsLanguage = ttsLanguage,
                     savedPositions = savedPositions,
                     onQualityClick = { showQualityDialog = true },
+                    onLanguageClick = { showLanguageDialog = true },
                     onLegalClick = {
                         onLegalDocumentSelected(LegalDocumentType.PRIVACY)
                         showLegalDialog = true
@@ -297,8 +318,10 @@ private fun ReaderBottomNavigation(
 @Composable
 private fun SettingsScreen(
     numSteps: Int,
+    ttsLanguage: TtsLanguage,
     savedPositions: List<LastReadPosition>,
     onQualityClick: () -> Unit,
+    onLanguageClick: () -> Unit,
     onLegalClick: () -> Unit,
     onDeleteSavedPosition: (String) -> Unit,
 ) {
@@ -321,6 +344,13 @@ private fun SettingsScreen(
                     Text(stringResource(R.string.reader_step_count, numSteps))
                 },
                 modifier = Modifier.clickable(onClick = onQualityClick),
+            )
+        }
+        item {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.reader_speech_language)) },
+                supportingContent = { Text(stringResource(ttsLanguage.labelResource())) },
+                modifier = Modifier.clickable(onClick = onLanguageClick),
             )
         }
         item {
@@ -372,6 +402,46 @@ private fun SettingsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun TtsLanguageDialog(
+    selectedLanguage: TtsLanguage,
+    onSelect: (TtsLanguage) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.reader_speech_language)) },
+        text = {
+            Column {
+                TtsLanguage.entries.forEach { language ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(language) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = language == selectedLanguage,
+                            onClick = null,
+                        )
+                        Text(stringResource(language.labelResource()))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+@StringRes
+private fun TtsLanguage.labelResource(): Int = when (this) {
+    TtsLanguage.TURKISH -> R.string.tts_language_turkish
+    TtsLanguage.ENGLISH -> R.string.tts_language_english
 }
 
 @Composable
@@ -556,7 +626,11 @@ private fun PlaybackControls(
                             chunkCount,
                             document.locationLabel(it.sectionIndex),
                         )
-                    } ?: stringResource(R.string.reader_ready_status, chunkCount),
+                    } ?: pluralStringResource(
+                        R.plurals.reader_ready_status,
+                        chunkCount,
+                        chunkCount,
+                    ),
                 )
             }
             activeChunk?.let { chunk ->
@@ -725,11 +799,7 @@ private fun DocumentText(
     ) {
         item {
             Text(
-                text = stringResource(
-                    R.string.reader_section_count,
-                    document.sections.size,
-                    document.sectionTypeLabel(),
-                ),
+                text = document.sectionCountLabel(),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -787,9 +857,17 @@ private fun PlaybackState.activeChunk(): SpeechChunk? = when (this) {
 }
 
 @Composable
-private fun Document.sectionTypeLabel(): String = when (format) {
-    DocumentFormat.PDF -> stringResource(R.string.reader_pdf_section_type)
-    DocumentFormat.EPUB -> stringResource(R.string.reader_epub_section_type)
+private fun Document.sectionCountLabel(): String = when (format) {
+    DocumentFormat.PDF -> pluralStringResource(
+        R.plurals.reader_pdf_section_count,
+        sections.size,
+        sections.size,
+    )
+    DocumentFormat.EPUB -> pluralStringResource(
+        R.plurals.reader_epub_section_count,
+        sections.size,
+        sections.size,
+    )
 }
 
 @Composable

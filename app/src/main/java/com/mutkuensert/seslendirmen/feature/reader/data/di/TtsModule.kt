@@ -3,7 +3,7 @@ package com.mutkuensert.seslendirmen.feature.reader.data.di
 import com.mutkuensert.seslendirmen.feature.reader.data.playback.AudioTrackPlayer
 import com.mutkuensert.seslendirmen.feature.reader.data.playback.AndroidPlaybackServiceController
 import com.mutkuensert.seslendirmen.feature.reader.data.playback.BufferedTtsPlaybackController
-import com.mutkuensert.seslendirmen.feature.reader.data.tts.TurkishSentenceChunker
+import com.mutkuensert.seslendirmen.feature.reader.data.tts.LocaleSentenceChunker
 import com.mutkuensert.seslendirmen.feature.reader.data.tts.SherpaOnnxTtsEngine
 import com.mutkuensert.seslendirmen.feature.reader.data.preferences.TtsPreferences
 import com.mutkuensert.seslendirmen.feature.reader.domain.playback.AudioPlayer
@@ -37,7 +37,7 @@ abstract class TtsModule {
 
     @Binds
     @Singleton
-    abstract fun bindSpeechChunker(implementation: TurkishSentenceChunker): SpeechChunker
+    abstract fun bindSpeechChunker(implementation: LocaleSentenceChunker): SpeechChunker
 
     @Binds
     @Singleton

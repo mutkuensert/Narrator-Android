@@ -6,6 +6,7 @@ import com.mutkuensert.seslendirmen.feature.reader.domain.model.LastReadPosition
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.LegalDocumentType
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.Document
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.SpeechChunk
+import com.mutkuensert.seslendirmen.feature.reader.domain.model.TtsLanguage
 import com.mutkuensert.seslendirmen.feature.reader.domain.playback.PlaybackServiceController
 import com.mutkuensert.seslendirmen.feature.reader.domain.playback.PlaybackState
 import com.mutkuensert.seslendirmen.feature.reader.domain.repository.DocumentReadException
@@ -43,6 +44,8 @@ class ReaderViewModel @Inject constructor(
     val savedPositions = lastReadPositionRepository.positions
     private val _numSteps = MutableStateFlow(ttsSettingsRepository.readNumSteps())
     val numSteps: StateFlow<Int> = _numSteps.asStateFlow()
+    private val _ttsLanguage = MutableStateFlow(ttsSettingsRepository.readLanguage())
+    val ttsLanguage: StateFlow<TtsLanguage> = _ttsLanguage.asStateFlow()
     private val _legalDocumentState = MutableStateFlow<LegalDocumentUiState>(
         LegalDocumentUiState.Idle,
     )
@@ -79,7 +82,7 @@ class ReaderViewModel @Inject constructor(
                 val document = documentRepository.openDocument(uri) { progress ->
                     _uiState.update { ReaderUiState.Loading(progress) }
                 }
-                chunks = speechChunker.createChunks(document)
+                chunks = speechChunker.createChunks(document, _ttsLanguage.value)
                 currentFileName = document.fileName ?: document.title
                 val savedPosition = currentFileName?.let(lastReadPositionRepository::read)
                 val openedFileIsShorter = savedPosition != null &&
@@ -124,6 +127,35 @@ class ReaderViewModel @Inject constructor(
             val currentChunkId = playbackState.value.activeChunk()?.id
                 ?: (_uiState.value as? ReaderUiState.Content)?.restoredChunk?.id
             playbackController.load(chunks, currentChunkId)
+        }
+    }
+
+    fun handleTtsLanguageChanged(language: TtsLanguage) {
+        if (language == _ttsLanguage.value) return
+        ttsSettingsRepository.saveLanguage(language)
+        _ttsLanguage.update { language }
+
+        val content = _uiState.value as? ReaderUiState.Content ?: return
+        val previousChunk = playbackState.value.activeChunk() ?: content.restoredChunk
+        chunks = speechChunker.createChunks(content.document, language)
+        val restoredChunk = previousChunk?.let { previous ->
+            chunks.firstOrNull {
+                it.sectionIndex == previous.sectionIndex &&
+                    it.paragraphIndex == previous.paragraphIndex
+            }
+        }
+        playbackController.load(chunks, restoredChunk?.id)
+        _uiState.update {
+            content.copy(
+                chunkCount = chunks.size,
+                restoredChunk = restoredChunk,
+            )
+        }
+        val fileName = currentFileName
+        if (fileName != null && restoredChunk != null) {
+            lastReadPositionRepository.save(
+                LastReadPosition(fileName, restoredChunk.id, chunks.size),
+            )
         }
     }
 

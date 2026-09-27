@@ -1,6 +1,6 @@
 # Seslendirmen Gizlilik Politikası / Privacy Policy
 
-**Yürürlük ve son güncelleme tarihi / Effective and last updated:** 27 Eylül 2026 / 27 September 2026
+**Yürürlük ve son güncelleme tarihi / Effective and last updated:** 28 Eylül 2026 / 28 September 2026
 
 Bu politika, M. Utku Ensert ("geliştirici") tarafından sunulan Seslendirmen Android uygulamasını
 ("uygulama") kapsar. Sorularınız için `ensertyazilim@gmail.com` adresinden iletişime geçebilirsiniz.
@@ -28,7 +28,8 @@ izleme, Firebase Analytics veya Crashlytics içermez. Belgelerin içeriği, OCR 
   tercihlerinde saklanır. Bu kayıtları Ayarlar ekranından ayrı ayrı silebilirsiniz. Uygulama ayrıca
   seçilen belgeleri daha sonra tekrar okuyabilmek için Android belge sağlayıcısından kalıcı
   salt-okuma erişimi isteyebilir.
-- **TTS tercihi:** Seçtiğiniz konuşma üretim kalite/adım değeri cihazda saklanır.
+- **TTS tercihleri:** Seçtiğiniz konuşma üretim kalite/adım değeri ve seslendirme dili cihazda
+  saklanır.
 - **Geçici veriler:** Çıkarılmış metin, OCR için oluşturulan sayfa görüntüleri ve üretilen ses,
   özelliği çalıştırmak için cihazda geçici olarak işlenir; uygulama bunları geliştirici sunucusuna
   yüklemez veya ayrı kullanıcı dosyaları olarak kalıcı biçimde kaydetmez.
@@ -112,7 +113,8 @@ below.
   your places. You can delete these records individually from Settings. The app may also ask the
   Android document provider to retain read-only access to selected documents so they can be opened
   again.
-- **TTS preference:** Your selected speech-generation quality/step value is stored on the device.
+- **TTS preferences:** Your selected speech-generation quality/step value and narration language are
+  stored on the device.
 - **Temporary data:** Extracted text, rendered page images used for OCR, and generated audio are
   processed temporarily on the device. They are not uploaded to a developer server or saved by the
   app as separate permanent user files.
