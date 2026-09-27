@@ -23,10 +23,11 @@ izleme, Firebase Analytics veya Crashlytics içermez. Belgelerin içeriği, OCR 
 - **Kullanıcının seçtiği belgeler:** Uygulama yalnızca Android'in sistem belge seçicisi üzerinden
   açıkça seçtiğiniz PDF veya EPUB dosyasını okur. Geniş kapsamlı depolama izni istemez. Belge
   içeriği; metin çıkarma, taranmış PDF sayfalarında OCR ve ses üretimi amacıyla cihazda işlenir.
-- **Belge bilgileri ve okuma konumu:** Son seçilen belgenin dosya adı ile son okunan bölümün kimliği
-  ve toplam bölüm sayısı, kaldığınız yere dönebilmeniz için uygulamanın özel yerel tercihlerinde
-  saklanır. Uygulama ayrıca seçilen belgeyi daha sonra tekrar okuyabilmek için Android belge
-  sağlayıcısından kalıcı salt-okuma erişimi isteyebilir.
+- **Belge bilgileri ve okuma konumları:** Açtığınız belgelerin dosya adları ile son okunan bölüm
+  kimliği ve toplam bölüm sayısı, kaldığınız yerlere dönebilmeniz için uygulamanın özel yerel
+  tercihlerinde saklanır. Bu kayıtları Ayarlar ekranından ayrı ayrı silebilirsiniz. Uygulama ayrıca
+  seçilen belgeleri daha sonra tekrar okuyabilmek için Android belge sağlayıcısından kalıcı
+  salt-okuma erişimi isteyebilir.
 - **TTS tercihi:** Seçtiğiniz konuşma üretim kalite/adım değeri cihazda saklanır.
 - **Geçici veriler:** Çıkarılmış metin, OCR için oluşturulan sayfa görüntüleri ve üretilen ses,
   özelliği çalıştırmak için cihazda geçici olarak işlenir; uygulama bunları geliştirici sunucusuna
@@ -69,10 +70,11 @@ kullanır. ML Kit'in bağımsız teknik veri işlemesi bir önceki bölümde aç
 
 ### Saklama ve silme
 
-Belgenin kendisi seçtiğiniz depolama konumunda kalır ve uygulama tarafından silinmez. Dosya adı,
-okuma konumu, TTS tercihi ve kalıcı okuma izni; siz Android ayarlarından uygulama verilerini
-temizleyene veya uygulamayı kaldırana kadar cihazda kalabilir. Uygulama verilerini temizlemek ya da
-uygulamayı kaldırmak uygulamanın yönettiği yerel verileri siler ve belge erişimini kaldırır. Hesap
+Belgenin kendisi seçtiğiniz depolama konumunda kalır ve uygulama tarafından silinmez. Belge adı ve
+okuma konumu kayıtlarını Ayarlar ekranından ayrı ayrı silebilirsiniz. Tüm yerel tercihler ve kalıcı
+okuma izinleri, siz Android ayarlarından uygulama verilerini temizleyene veya uygulamayı kaldırana
+kadar cihazda kalabilir. Uygulama verilerini temizlemek ya da uygulamayı kaldırmak uygulamanın
+yönettiği yerel verileri siler ve belge erişimini kaldırır. Hesap
 ve geliştirici sunucusunda saklanan kullanıcı verisi bulunmadığından ayrıca sunucu taraflı silme
 talebi gerekmez. Google tarafından işlenen ML Kit teknik verileri için Google'ın gizlilik politikası
 ve saklama uygulamaları geçerlidir.
@@ -105,10 +107,11 @@ below.
 - **Documents you select:** The app reads only a PDF or EPUB file that you explicitly select with
   Android's system document picker. It does not request broad storage access. Document content is
   processed on the device for text extraction, OCR of scanned PDF pages, and speech generation.
-- **Document information and reading position:** The last document's file name, last-read chunk ID,
-  and total chunk count are stored in private local preferences so the app can restore your place.
-  The app may also ask the Android document provider to retain read-only access to the selected
-  document so it can be opened again.
+- **Document information and reading positions:** The file names, last-read chunk IDs, and total
+  chunk counts of documents you open are stored in private local preferences so the app can restore
+  your places. You can delete these records individually from Settings. The app may also ask the
+  Android document provider to retain read-only access to selected documents so they can be opened
+  again.
 - **TTS preference:** Your selected speech-generation quality/step value is stored on the device.
 - **Temporary data:** Extracted text, rendered page images used for OCR, and generated audio are
   processed temporarily on the device. They are not uploaded to a developer server or saved by the
@@ -151,9 +154,10 @@ separate technical data processing is disclosed above.
 ### Retention and deletion
 
 The document itself remains in the storage location you selected and is not deleted by the app.
-The file name, reading position, TTS preference, and retained read permission may remain on the
-device until you clear the app's data in Android settings or uninstall the app. Either action removes
-app-managed local data and document access. Because there is no account or user data stored on a
+You can delete individual document-name and reading-position records from Settings. Other local
+preferences and retained read permissions may remain on the device until you clear the app's data
+in Android settings or uninstall the app. Either action removes app-managed local data and document
+access. Because there is no account or user data stored on a
 developer server, no separate server-side deletion request is required. Google's privacy policy and
 retention practices apply to technical ML Kit data processed by Google.
 

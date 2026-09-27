@@ -1,6 +1,7 @@
 package com.mutkuensert.seslendirmen.presentation.reader
 
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
@@ -25,6 +27,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -47,11 +51,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mutkuensert.seslendirmen.R
 import com.mutkuensert.seslendirmen.data.preferences.TtsPreferences
 import com.mutkuensert.seslendirmen.domain.model.Document
 import com.mutkuensert.seslendirmen.domain.model.DocumentFormat
+import com.mutkuensert.seslendirmen.domain.model.LastReadPosition
 import com.mutkuensert.seslendirmen.domain.model.SpeechChunk
 import com.mutkuensert.seslendirmen.domain.playback.PlaybackState
 import com.mutkuensert.seslendirmen.domain.repository.DocumentExtractionProgress
@@ -62,6 +69,7 @@ fun ReaderRoute(viewModel: ReaderViewModel) {
     val state by viewModel.uiState.collectAsState()
     val playbackState by viewModel.playbackState.collectAsState()
     val numSteps by viewModel.numSteps.collectAsState()
+    val savedPositions by viewModel.savedPositions.collectAsState()
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.openDocument(it.toString()) }
     }
@@ -69,6 +77,7 @@ fun ReaderRoute(viewModel: ReaderViewModel) {
         state = state,
         playbackState = playbackState,
         numSteps = numSteps,
+        savedPositions = savedPositions,
         onSelectDocument = { picker.launch(SUPPORTED_MIME_TYPES) },
         onPlay = viewModel::play,
         onPause = viewModel::pause,
@@ -78,6 +87,7 @@ fun ReaderRoute(viewModel: ReaderViewModel) {
         onParagraphClick = viewModel::playFromParagraph,
         onDismissShorterDocumentWarning = viewModel::dismissShorterDocumentWarning,
         onNumStepsChanged = viewModel::setNumSteps,
+        onDeleteSavedPosition = viewModel::clearSavedPosition,
     )
 }
 
@@ -87,6 +97,7 @@ private fun ReaderScreen(
     state: ReaderUiState,
     playbackState: PlaybackState,
     numSteps: Int,
+    savedPositions: List<LastReadPosition>,
     onSelectDocument: () -> Unit,
     onPlay: () -> Unit,
     onPause: () -> Unit,
@@ -96,12 +107,16 @@ private fun ReaderScreen(
     onParagraphClick: (sectionIndex: Int, paragraphIndex: Int) -> Unit,
     onDismissShorterDocumentWarning: () -> Unit,
     onNumStepsChanged: (Int) -> Unit,
+    onDeleteSavedPosition: (String) -> Unit,
 ) {
     val title = (state as? ReaderUiState.Content)?.document?.title ?: "Seslendirmen"
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var showQualityDialog by rememberSaveable { mutableStateOf(false) }
     var showLegalDialog by rememberSaveable { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    var pendingPositionDeletion by rememberSaveable { mutableStateOf<String?>(null) }
+    BackHandler(enabled = showSettings) { showSettings = false }
     if (state is ReaderUiState.Content && state.showShorterDocumentWarning) {
         AlertDialog(
             onDismissRequest = onDismissShorterDocumentWarning,
@@ -131,15 +146,42 @@ private fun ReaderScreen(
     if (showLegalDialog) {
         LegalNoticesDialog(onDismiss = { showLegalDialog = false })
     }
+    pendingPositionDeletion?.let { fileName ->
+        AlertDialog(
+            onDismissRequest = { pendingPositionDeletion = null },
+            title = { Text("Kayıtlı konum silinsin mi?") },
+            text = { Text("“$fileName” için kaydedilen başlangıç yeri silinecek.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteSavedPosition(fileName)
+                        pendingPositionDeletion = null
+                    },
+                ) {
+                    Text("Sil")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingPositionDeletion = null }) { Text("İptal") }
+            },
+        )
+    }
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(title, maxLines = 1) },
-            )
+            if (showSettings) {
+                TopAppBar(
+                    title = { Text("Ayarlar") },
+                    navigationIcon = {
+                        TextButton(onClick = { showSettings = false }) { Text("Geri") }
+                    },
+                )
+            } else {
+                TopAppBar(title = { Text(title, maxLines = 1) })
+            }
         },
         bottomBar = {
             Column {
-                if (state is ReaderUiState.Content) {
+                if (!showSettings && state is ReaderUiState.Content) {
                     PlaybackControls(
                         state = playbackState,
                         chunkCount = state.chunkCount,
@@ -156,12 +198,12 @@ private fun ReaderScreen(
                     )
                 }
                 ReaderBottomNavigation(
-                    numSteps = numSteps,
-                    isLegalSelected = showLegalDialog,
-                    isQualitySelected = showQualityDialog,
-                    onLegalClick = { showLegalDialog = true },
-                    onQualityClick = { showQualityDialog = true },
-                    onSelectDocument = onSelectDocument,
+                    isSettingsSelected = showSettings,
+                    onSettingsClick = { showSettings = true },
+                    onSelectDocument = {
+                        showSettings = false
+                        onSelectDocument()
+                    },
                 )
             }
         },
@@ -171,17 +213,27 @@ private fun ReaderScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            when (state) {
-                ReaderUiState.Empty -> EmptyDocument()
-                is ReaderUiState.Loading -> LoadingDocument(state.progress)
-                is ReaderUiState.Content -> DocumentText(
-                    document = state.document,
-                    activeChunk = playbackState.activeChunk() ?: state.restoredChunk,
-                    listState = listState,
-                    onParagraphClick = onParagraphClick,
+            if (showSettings) {
+                SettingsScreen(
+                    numSteps = numSteps,
+                    savedPositions = savedPositions,
+                    onQualityClick = { showQualityDialog = true },
+                    onLegalClick = { showLegalDialog = true },
+                    onDeleteSavedPosition = { pendingPositionDeletion = it },
                 )
+            } else {
+                when (state) {
+                    ReaderUiState.Empty -> EmptyDocument()
+                    is ReaderUiState.Loading -> LoadingDocument(state.progress)
+                    is ReaderUiState.Content -> DocumentText(
+                        document = state.document,
+                        activeChunk = playbackState.activeChunk() ?: state.restoredChunk,
+                        listState = listState,
+                        onParagraphClick = onParagraphClick,
+                    )
 
-                is ReaderUiState.Error -> ErrorDocument(state.message)
+                    is ReaderUiState.Error -> ErrorDocument(state.message)
+                }
             }
         }
     }
@@ -189,32 +241,105 @@ private fun ReaderScreen(
 
 @Composable
 private fun ReaderBottomNavigation(
-    numSteps: Int,
-    isLegalSelected: Boolean,
-    isQualitySelected: Boolean,
-    onLegalClick: () -> Unit,
-    onQualityClick: () -> Unit,
+    isSettingsSelected: Boolean,
+    onSettingsClick: () -> Unit,
     onSelectDocument: () -> Unit,
 ) {
     NavigationBar {
         NavigationBarItem(
-            selected = isLegalSelected,
-            onClick = onLegalClick,
-            icon = { Text("§", style = MaterialTheme.typography.titleMedium) },
-            label = { Text("Yasal") },
-        )
-        NavigationBarItem(
-            selected = isQualitySelected,
-            onClick = onQualityClick,
-            icon = { Text(numSteps.toString(), style = MaterialTheme.typography.titleMedium) },
-            label = { Text("Kalite") },
+            selected = isSettingsSelected,
+            onClick = onSettingsClick,
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_settings),
+                    contentDescription = null,
+                )
+            },
+            label = { Text("Ayarlar") },
         )
         NavigationBarItem(
             selected = false,
             onClick = onSelectDocument,
-            icon = { Text("+", style = MaterialTheme.typography.titleMedium) },
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_document_add),
+                    contentDescription = null,
+                )
+            },
             label = { Text("Belge seç") },
         )
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    numSteps: Int,
+    savedPositions: List<LastReadPosition>,
+    onQualityClick: () -> Unit,
+    onLegalClick: () -> Unit,
+    onDeleteSavedPosition: (String) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 12.dp),
+    ) {
+        item {
+            Text(
+                text = "Uygulama",
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        item {
+            ListItem(
+                headlineContent = { Text("Okuma kalitesi") },
+                supportingContent = { Text("Adım sayısı: $numSteps") },
+                modifier = Modifier.clickable(onClick = onQualityClick),
+            )
+        }
+        item {
+            ListItem(
+                headlineContent = { Text("Yasal bilgiler") },
+                supportingContent = { Text("Gizlilik politikası ve lisanslar") },
+                modifier = Modifier.clickable(onClick = onLegalClick),
+            )
+        }
+        item { HorizontalDivider() }
+        item {
+            Text(
+                text = "Kaydedilen başlangıç yerleri",
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        if (savedPositions.isEmpty()) {
+            item {
+                Text(
+                    text = "Henüz kaydedilmiş bir belge konumu yok.",
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            items(savedPositions, key = { it.fileName }) { position ->
+                ListItem(
+                    headlineContent = { Text(position.fileName) },
+                    supportingContent = {
+                        Text(
+                            "Başlangıç yeri: Parça ${position.chunkId + 1}/${position.chunkCount}",
+                        )
+                    },
+                    trailingContent = {
+                        TextButton(onClick = { onDeleteSavedPosition(position.fileName) }) {
+                            Text("Sil")
+                        }
+                    },
+                )
+            }
+        }
     }
 }
 

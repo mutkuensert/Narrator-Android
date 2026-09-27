@@ -37,6 +37,7 @@ class ReaderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Empty)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
     val playbackState = playbackController.state
+    val savedPositions = lastReadPositionStore.positions
     private val _numSteps = MutableStateFlow(ttsPreferences.readNumSteps())
     val numSteps: StateFlow<Int> = _numSteps.asStateFlow()
     private var loadingJob: Job? = null
@@ -121,6 +122,13 @@ class ReaderViewModel @Inject constructor(
     fun dismissShorterDocumentWarning() {
         val content = _uiState.value as? ReaderUiState.Content ?: return
         _uiState.value = content.copy(showShorterDocumentWarning = false)
+    }
+
+    fun clearSavedPosition(fileName: String) {
+        lastReadPositionStore.clear(fileName)
+        if (currentFileName != fileName) return
+        val content = _uiState.value as? ReaderUiState.Content ?: return
+        _uiState.value = content.copy(restoredChunk = null)
     }
 
     fun playFromParagraph(sectionIndex: Int, paragraphIndex: Int) {

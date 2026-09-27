@@ -10,9 +10,9 @@ on the device.
 ## Privacy
 
 The app's data practices are described in the [Privacy Policy](PRIVACY_POLICY.md). The same policy
-is bundled with the application and can be opened from **Yasal > Gizlilik**. Before a Google Play
-release, publish this file at a stable, publicly accessible web URL and enter that URL in Play
-Console.
+is bundled with the application and can be opened from **Ayarlar > Yasal bilgiler > Gizlilik**.
+Before a Google Play release, publish this file at a stable, publicly accessible web URL and enter
+that URL in Play Console.
 
 ## Licensing
 
@@ -33,7 +33,7 @@ That license does **not** replace the licenses or terms of third-party component
 
 The notices shipped with the Android application are listed in
 [`THIRD_PARTY_NOTICES.txt`](app/src/main/assets/legal/THIRD_PARTY_NOTICES.txt). They can also be
-opened from the app's **Yasal** action.
+opened from **Ayarlar > Yasal bilgiler** in the app.
 
 By using or redistributing the bundled Supertonic 3 model, you must comply with its Open RAIL-M
 license, including its use restrictions and redistribution conditions. Do not describe the bundled

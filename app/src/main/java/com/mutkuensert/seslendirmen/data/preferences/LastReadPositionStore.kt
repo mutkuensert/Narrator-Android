@@ -1,8 +1,12 @@
 package com.mutkuensert.seslendirmen.data.preferences
 
 import android.content.Context
+import android.util.Base64
 import com.mutkuensert.seslendirmen.domain.model.LastReadPosition
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,36 +15,69 @@ class LastReadPositionStore @Inject constructor(
     @ApplicationContext context: Context,
 ) {
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+    private val _positions = MutableStateFlow(loadPositions())
+    val positions: StateFlow<List<LastReadPosition>> = _positions.asStateFlow()
 
     fun read(fileName: String): LastReadPosition? {
-        if (preferences.getString(KEY_FILE_NAME, null) != fileName) return null
-        if (!preferences.contains(KEY_CHUNK_ID) || !preferences.contains(KEY_CHUNK_COUNT)) {
+        val chunkIdKey = positionKey(fileName, CHUNK_ID_SUFFIX)
+        val chunkCountKey = positionKey(fileName, CHUNK_COUNT_SUFFIX)
+        if (!preferences.contains(chunkIdKey) || !preferences.contains(chunkCountKey)) {
             return null
         }
         return LastReadPosition(
             fileName = fileName,
-            chunkId = preferences.getLong(KEY_CHUNK_ID, 0L),
-            chunkCount = preferences.getInt(KEY_CHUNK_COUNT, 0),
+            chunkId = preferences.getLong(chunkIdKey, 0L),
+            chunkCount = preferences.getInt(chunkCountKey, 0),
         )
     }
 
+    @Synchronized
     fun save(position: LastReadPosition) {
+        val fileNames = storedFileNames().apply { add(position.fileName) }
         preferences.edit()
-            .putString(KEY_FILE_NAME, position.fileName)
-            .putLong(KEY_CHUNK_ID, position.chunkId)
-            .putInt(KEY_CHUNK_COUNT, position.chunkCount)
+            .putStringSet(KEY_FILE_NAMES, fileNames)
+            .putLong(positionKey(position.fileName, CHUNK_ID_SUFFIX), position.chunkId)
+            .putInt(positionKey(position.fileName, CHUNK_COUNT_SUFFIX), position.chunkCount)
             .apply()
+        publishPositions()
     }
 
+    @Synchronized
     fun clear(fileName: String) {
-        if (preferences.getString(KEY_FILE_NAME, null) != fileName) return
-        preferences.edit().clear().apply()
+        val fileNames = storedFileNames().apply { remove(fileName) }
+        preferences.edit()
+            .putStringSet(KEY_FILE_NAMES, fileNames)
+            .remove(positionKey(fileName, CHUNK_ID_SUFFIX))
+            .remove(positionKey(fileName, CHUNK_COUNT_SUFFIX))
+            .apply()
+        publishPositions()
     }
+
+    private fun publishPositions() {
+        _positions.value = loadPositions()
+    }
+
+    private fun loadPositions(): List<LastReadPosition> =
+        storedFileNames()
+            .mapNotNull(::read)
+            .sortedBy { it.fileName.lowercase() }
+
+    private fun storedFileNames(): MutableSet<String> =
+        preferences.getStringSet(KEY_FILE_NAMES, emptySet()).orEmpty().toMutableSet()
 
     private companion object {
         const val PREFERENCES_NAME = "reader_position"
-        const val KEY_FILE_NAME = "file_name"
-        const val KEY_CHUNK_ID = "chunk_id"
-        const val KEY_CHUNK_COUNT = "chunk_count"
+        const val KEY_FILE_NAMES = "file_names"
+        const val POSITION_KEY_PREFIX = "position."
+        const val CHUNK_ID_SUFFIX = ".chunk_id"
+        const val CHUNK_COUNT_SUFFIX = ".chunk_count"
+
+        fun positionKey(fileName: String, suffix: String): String {
+            val encodedFileName = Base64.encodeToString(
+                fileName.toByteArray(Charsets.UTF_8),
+                Base64.NO_WRAP or Base64.URL_SAFE,
+            )
+            return "$POSITION_KEY_PREFIX$encodedFileName$suffix"
+        }
     }
 }

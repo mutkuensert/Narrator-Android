@@ -19,10 +19,11 @@ UYGULAMANIN ERİŞTİĞİ VE CİHAZDA İŞLEDİĞİ VERİLER
 seçtiğiniz PDF veya EPUB dosyasını okur. Geniş kapsamlı depolama izni istemez. Belge içeriği; metin
 çıkarma, taranmış PDF sayfalarında OCR ve ses üretimi amacıyla cihazda işlenir.
 
-• Belge bilgileri ve okuma konumu: Son seçilen belgenin dosya adı ile son okunan bölümün kimliği ve
-toplam bölüm sayısı, kaldığınız yere dönebilmeniz için uygulamanın özel yerel tercihlerinde saklanır.
-Uygulama ayrıca seçilen belgeyi daha sonra tekrar okuyabilmek için Android belge sağlayıcısından
-kalıcı salt-okuma erişimi isteyebilir.
+• Belge bilgileri ve okuma konumları: Açtığınız belgelerin dosya adları ile son okunan bölüm kimliği
+ve toplam bölüm sayısı, kaldığınız yerlere dönebilmeniz için uygulamanın özel yerel tercihlerinde
+saklanır. Bu kayıtları Ayarlar ekranından ayrı ayrı silebilirsiniz. Uygulama ayrıca seçilen belgeleri
+daha sonra tekrar okuyabilmek için Android belge sağlayıcısından kalıcı salt-okuma erişimi
+isteyebilir.
 
 • TTS tercihi: Seçtiğiniz konuşma üretim kalite/adım değeri cihazda saklanır.
 
@@ -68,10 +69,11 @@ ML Kit'in bağımsız teknik veri işlemesi bir önceki bölümde açıklanmış
 
 SAKLAMA VE SİLME
 
-Belgenin kendisi seçtiğiniz depolama konumunda kalır ve uygulama tarafından silinmez. Dosya adı,
-okuma konumu, TTS tercihi ve kalıcı okuma izni; siz Android ayarlarından uygulama verilerini
-temizleyene veya uygulamayı kaldırana kadar cihazda kalabilir. Uygulama verilerini temizlemek ya da
-uygulamayı kaldırmak uygulamanın yönettiği yerel verileri siler ve belge erişimini kaldırır. Hesap ve
+Belgenin kendisi seçtiğiniz depolama konumunda kalır ve uygulama tarafından silinmez. Belge adı ve
+okuma konumu kayıtlarını Ayarlar ekranından ayrı ayrı silebilirsiniz. Tüm yerel tercihler ve kalıcı
+okuma izinleri, siz Android ayarlarından uygulama verilerini temizleyene veya uygulamayı kaldırana
+kadar cihazda kalabilir. Uygulama verilerini temizlemek ya da uygulamayı kaldırmak uygulamanın
+yönettiği yerel verileri siler ve belge erişimini kaldırır. Hesap ve
 geliştirici sunucusunda saklanan kullanıcı verisi bulunmadığından ayrıca sunucu taraflı silme talebi
 gerekmez. Google tarafından işlenen ML Kit teknik verileri için Google'ın gizlilik politikası ve
 saklama uygulamaları geçerlidir.
