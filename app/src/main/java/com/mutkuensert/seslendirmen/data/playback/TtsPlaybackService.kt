@@ -176,15 +176,15 @@ class TtsPlaybackService : Service() {
     private fun PlaybackState.notificationText(): String = when (this) {
         is PlaybackState.Preparing -> getString(
             R.string.notification_preparing,
-            chunk.pageNumber,
+            chunk.sectionIndex,
         )
         is PlaybackState.Playing -> getString(
             R.string.notification_playing,
-            chunk.pageNumber,
+            chunk.sectionIndex,
         )
         is PlaybackState.Paused -> getString(
             R.string.notification_paused,
-            chunk.pageNumber,
+            chunk.sectionIndex,
         )
         is PlaybackState.Error -> error.message
         PlaybackState.Idle -> getString(R.string.notification_ready)

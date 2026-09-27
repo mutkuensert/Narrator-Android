@@ -7,7 +7,7 @@ import org.junit.Test
 
 class PlaybackQueueTest {
     private val chunks = (0L..2L).map { id ->
-        SpeechChunk(id = id, pageNumber = 1, paragraphIndex = id.toInt(), text = "Chunk $id")
+        SpeechChunk(id = id, sectionIndex = 1, paragraphIndex = id.toInt(), text = "Chunk $id")
     }
 
     @Test

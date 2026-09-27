@@ -1,6 +1,6 @@
 package com.mutkuensert.seslendirmen.data.pdf
 
-import com.mutkuensert.seslendirmen.domain.model.PdfParagraph
+import com.mutkuensert.seslendirmen.domain.model.DocumentParagraph
 import com.mutkuensert.seslendirmen.domain.repository.TextPreprocessor
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,7 +14,7 @@ fun interface TextNormalizer {
 class ConservativeTextPreprocessor @Inject constructor() : TextPreprocessor {
     private val normalizers: List<TextNormalizer> = emptyList()
 
-    override fun preprocessPage(rawText: String, pageNumber: Int): List<PdfParagraph> {
+    override fun preprocessPage(rawText: String, pageNumber: Int): List<DocumentParagraph> {
         val lines = rawText
             .replace("\r\n", "\n")
             .replace('\r', '\n')
@@ -24,14 +24,14 @@ class ConservativeTextPreprocessor @Inject constructor() : TextPreprocessor {
 
         removeObviousPageNumber(lines, pageNumber)
 
-        val paragraphs = mutableListOf<PdfParagraph>()
+        val paragraphs = mutableListOf<DocumentParagraph>()
         val current = StringBuilder()
 
         fun finishParagraph() {
             if (current.isEmpty()) return
             var text = current.toString().replace(REPEATED_WHITESPACE, " ").trim()
             normalizers.forEach { normalizer -> text = normalizer.normalize(text) }
-            if (text.isNotEmpty()) paragraphs += PdfParagraph(text)
+            if (text.isNotEmpty()) paragraphs += DocumentParagraph(text)
             current.clear()
         }
 

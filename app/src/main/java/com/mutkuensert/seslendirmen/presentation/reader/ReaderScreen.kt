@@ -42,10 +42,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.mutkuensert.seslendirmen.domain.model.PdfDocument
+import com.mutkuensert.seslendirmen.domain.model.Document
+import com.mutkuensert.seslendirmen.domain.model.DocumentFormat
 import com.mutkuensert.seslendirmen.domain.model.SpeechChunk
 import com.mutkuensert.seslendirmen.domain.playback.PlaybackState
-import com.mutkuensert.seslendirmen.domain.repository.PdfExtractionProgress
+import com.mutkuensert.seslendirmen.domain.repository.DocumentExtractionProgress
 import com.mutkuensert.seslendirmen.data.preferences.TtsPreferences
 import kotlinx.coroutines.launch
 
@@ -61,7 +62,7 @@ fun ReaderRoute(viewModel: ReaderViewModel) {
         state = state,
         playbackState = playbackState,
         numSteps = numSteps,
-        onSelectPdf = { picker.launch(arrayOf(PDF_MIME_TYPE)) },
+        onSelectDocument = { picker.launch(SUPPORTED_MIME_TYPES) },
         onPlay = viewModel::play,
         onPause = viewModel::pause,
         onStop = viewModel::stop,
@@ -79,13 +80,13 @@ private fun ReaderScreen(
     state: ReaderUiState,
     playbackState: PlaybackState,
     numSteps: Int,
-    onSelectPdf: () -> Unit,
+    onSelectDocument: () -> Unit,
     onPlay: () -> Unit,
     onPause: () -> Unit,
     onStop: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onParagraphClick: (pageNumber: Int, paragraphIndex: Int) -> Unit,
+    onParagraphClick: (sectionIndex: Int, paragraphIndex: Int) -> Unit,
     onDismissShorterDocumentWarning: () -> Unit,
     onNumStepsChanged: (Int) -> Unit,
 ) {
@@ -128,10 +129,10 @@ private fun ReaderScreen(
                         Text("Kalite: $numSteps")
                     }
                     Button(
-                        onClick = onSelectPdf,
+                        onClick = onSelectDocument,
                         modifier = Modifier.padding(end = 8.dp),
                     ) {
-                        Text(if (state is ReaderUiState.Content) "Başka PDF" else "PDF seç")
+                        Text(if (state is ReaderUiState.Content) "Başka belge" else "Belge seç")
                     }
                 },
             )
@@ -142,6 +143,7 @@ private fun ReaderScreen(
                     state = playbackState,
                     chunkCount = state.chunkCount,
                     restoredChunk = state.restoredChunk,
+                    document = state.document,
                     onPlay = onPlay,
                     onPause = onPause,
                     onStop = {
@@ -160,7 +162,7 @@ private fun ReaderScreen(
                 .padding(padding),
         ) {
             when (state) {
-                ReaderUiState.Empty -> EmptyDocument(onSelectPdf)
+                ReaderUiState.Empty -> EmptyDocument(onSelectDocument)
                 is ReaderUiState.Loading -> LoadingDocument(state.progress)
                 is ReaderUiState.Content -> DocumentText(
                     document = state.document,
@@ -168,7 +170,7 @@ private fun ReaderScreen(
                     listState = listState,
                     onParagraphClick = onParagraphClick,
                 )
-                is ReaderUiState.Error -> ErrorDocument(state.message, onSelectPdf)
+                is ReaderUiState.Error -> ErrorDocument(state.message, onSelectDocument)
             }
         }
     }
@@ -222,6 +224,7 @@ private fun PlaybackControls(
     state: PlaybackState,
     chunkCount: Int,
     restoredChunk: SpeechChunk?,
+    document: Document,
     onPlay: () -> Unit,
     onPause: () -> Unit,
     onStop: () -> Unit,
@@ -239,16 +242,16 @@ private fun PlaybackControls(
             val activeChunk = state.activeChunk() ?: restoredChunk
             when (state) {
                 is PlaybackState.Preparing -> Text(
-                    "Ses hazırlanıyor • Bölüm ${state.chunk.id + 1}/$chunkCount • " +
-                        "Sayfa ${state.chunk.pageNumber}",
+                    "Ses hazırlanıyor • Parça ${state.chunk.id + 1}/$chunkCount • " +
+                        document.locationLabel(state.chunk.sectionIndex),
                 )
                 is PlaybackState.Playing -> Text(
-                    "Oynatılıyor • Bölüm ${state.chunk.id + 1}/$chunkCount • " +
-                        "Sayfa ${state.chunk.pageNumber}",
+                    "Oynatılıyor • Parça ${state.chunk.id + 1}/$chunkCount • " +
+                        document.locationLabel(state.chunk.sectionIndex),
                 )
                 is PlaybackState.Paused -> Text(
-                    "Duraklatıldı • Bölüm ${state.chunk.id + 1}/$chunkCount • " +
-                        "Sayfa ${state.chunk.pageNumber}",
+                    "Duraklatıldı • Parça ${state.chunk.id + 1}/$chunkCount • " +
+                        document.locationLabel(state.chunk.sectionIndex),
                 )
                 is PlaybackState.Error -> Text(
                     state.error.message,
@@ -256,8 +259,8 @@ private fun PlaybackControls(
                 )
                 PlaybackState.Idle -> Text(
                     restoredChunk?.let {
-                        "Kaldığınız yer hazır • Bölüm ${it.id + 1}/$chunkCount • " +
-                            "Sayfa ${it.pageNumber}"
+                        "Kaldığınız yer hazır • Parça ${it.id + 1}/$chunkCount • " +
+                            document.locationLabel(it.sectionIndex)
                     } ?: "$chunkCount konuşma bölümü hazır",
                 )
             }
@@ -302,7 +305,7 @@ private fun PlaybackControls(
 }
 
 @Composable
-private fun EmptyDocument(onSelectPdf: () -> Unit) {
+private fun EmptyDocument(onSelectDocument: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -311,21 +314,21 @@ private fun EmptyDocument(onSelectPdf: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Dinlemek istediğiniz PDF belgesini seçin.",
+            text = "Dinlemek istediğiniz PDF veya EPUB belgesini seçin.",
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
-            text = "Metin tabanlı ve taranmış PDF belgeleri otomatik olarak işlenir.",
+            text = "PDF sayfaları ve EPUB bölümleri otomatik olarak işlenir.",
             modifier = Modifier.padding(top = 8.dp, bottom = 20.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Button(onClick = onSelectPdf) { Text("PDF seç") }
+        Button(onClick = onSelectDocument) { Text("Belge seç") }
     }
 }
 
 @Composable
-private fun LoadingDocument(progress: PdfExtractionProgress?) {
+private fun LoadingDocument(progress: DocumentExtractionProgress?) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -333,18 +336,20 @@ private fun LoadingDocument(progress: PdfExtractionProgress?) {
     ) {
         CircularProgressIndicator()
         val message = when (progress?.stage) {
-            PdfExtractionProgress.Stage.EXTRACTING_TEXT ->
-                "Sayfa ${progress.pageNumber}/${progress.pageCount} okunuyor…"
-            PdfExtractionProgress.Stage.RECOGNIZING_SCAN ->
-                "Sayfa ${progress.pageNumber}/${progress.pageCount} taranmış metin olarak tanınıyor…"
-            null -> "PDF hazırlanıyor…"
+            DocumentExtractionProgress.Stage.EXTRACTING_TEXT ->
+                "Sayfa ${progress.sectionNumber}/${progress.sectionCount} okunuyor…"
+            DocumentExtractionProgress.Stage.RECOGNIZING_SCAN ->
+                "Sayfa ${progress.sectionNumber}/${progress.sectionCount} taranmış metin olarak tanınıyor…"
+            DocumentExtractionProgress.Stage.PARSING_EPUB ->
+                "EPUB bölümü ${progress.sectionNumber}/${progress.sectionCount} okunuyor…"
+            null -> "Belge hazırlanıyor…"
         }
         Text(message, modifier = Modifier.padding(top = 16.dp))
     }
 }
 
 @Composable
-private fun ErrorDocument(message: String, onSelectPdf: () -> Unit) {
+private fun ErrorDocument(message: String, onSelectDocument: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -353,18 +358,18 @@ private fun ErrorDocument(message: String, onSelectPdf: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(message, color = MaterialTheme.colorScheme.error)
-        Button(onClick = onSelectPdf, modifier = Modifier.padding(top = 20.dp)) {
-            Text("Başka PDF seç")
+        Button(onClick = onSelectDocument, modifier = Modifier.padding(top = 20.dp)) {
+            Text("Başka belge seç")
         }
     }
 }
 
 @Composable
 private fun DocumentText(
-    document: PdfDocument,
+    document: Document,
     activeChunk: SpeechChunk?,
     listState: LazyListState,
-    onParagraphClick: (pageNumber: Int, paragraphIndex: Int) -> Unit,
+    onParagraphClick: (sectionIndex: Int, paragraphIndex: Int) -> Unit,
 ) {
     LaunchedEffect(activeChunk?.id) {
         val targetIndex = activeChunk?.let { ReaderPositionMapper.lazyListIndex(document, it) }
@@ -379,17 +384,17 @@ private fun DocumentText(
     ) {
         item {
             Text(
-                text = "${document.pages.size} sayfa",
+                text = "${document.sections.size} ${document.sectionTypeLabel()}",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
         }
-        document.pages.forEach { page ->
-            item(key = "page-${page.pageNumber}") {
+        document.sections.forEach { section ->
+            item(key = "section-${section.index}") {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Text(
-                        text = "Sayfa ${page.pageNumber}",
+                        text = document.sectionHeading(section.index, section.title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -397,16 +402,16 @@ private fun DocumentText(
                 }
             }
             itemsIndexed(
-                items = page.paragraphs,
-                key = { index, _ -> "paragraph-${page.pageNumber}-$index" },
+                items = section.paragraphs,
+                key = { index, _ -> "paragraph-${section.index}-$index" },
             ) { paragraphIndex, paragraph ->
-                val isActive = activeChunk?.pageNumber == page.pageNumber &&
+                val isActive = activeChunk?.sectionIndex == section.index &&
                     activeChunk.paragraphIndex == paragraphIndex
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            onParagraphClick(page.pageNumber, paragraphIndex)
+                            onParagraphClick(section.index, paragraphIndex)
                         },
                     color = if (isActive) {
                         MaterialTheme.colorScheme.secondaryContainer
@@ -436,4 +441,19 @@ private fun PlaybackState.activeChunk(): SpeechChunk? = when (this) {
     is PlaybackState.Error, PlaybackState.Idle -> null
 }
 
-private const val PDF_MIME_TYPE = "application/pdf"
+private fun Document.sectionTypeLabel(): String = when (format) {
+    DocumentFormat.PDF -> "sayfa"
+    DocumentFormat.EPUB -> "bölüm"
+}
+
+private fun Document.sectionHeading(index: Int, title: String?): String = when (format) {
+    DocumentFormat.PDF -> "Sayfa $index"
+    DocumentFormat.EPUB -> title ?: "Bölüm $index"
+}
+
+private fun Document.locationLabel(index: Int): String = when (format) {
+    DocumentFormat.PDF -> "Sayfa $index"
+    DocumentFormat.EPUB -> "Bölüm $index"
+}
+
+private val SUPPORTED_MIME_TYPES = arrayOf("application/pdf", "application/epub+zip")

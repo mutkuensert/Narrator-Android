@@ -8,7 +8,7 @@
     <string name="notification_pause">Duraklat</string>
     <string name="notification_next">İleri</string>
     <string name="notification_ready">Oynatmaya hazır</string>
-    <string name="notification_preparing">Ses hazırlanıyor · Sayfa %1$d</string>
-    <string name="notification_playing">Oynatılıyor · Sayfa %1$d</string>
-    <string name="notification_paused">Duraklatıldı · Sayfa %1$d</string>
+    <string name="notification_preparing">Ses hazırlanıyor · Kısım %1$d</string>
+    <string name="notification_playing">Oynatılıyor · Kısım %1$d</string>
+    <string name="notification_paused">Duraklatıldı · Kısım %1$d</string>
 </resources>

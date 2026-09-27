@@ -1,6 +1,6 @@
 package com.mutkuensert.seslendirmen.data.tts
 
-import com.mutkuensert.seslendirmen.domain.model.PdfDocument
+import com.mutkuensert.seslendirmen.domain.model.Document
 import com.mutkuensert.seslendirmen.domain.model.SpeechChunk
 import com.mutkuensert.seslendirmen.domain.repository.SpeechChunker
 import java.text.BreakIterator
@@ -10,16 +10,16 @@ import javax.inject.Singleton
 
 @Singleton
 class TurkishSentenceChunker @Inject constructor() : SpeechChunker {
-    override fun createChunks(document: PdfDocument): List<SpeechChunk> {
+    override fun createChunks(document: Document): List<SpeechChunk> {
         var nextId = 0L
         return buildList {
-            document.pages.forEach { page ->
-                page.paragraphs.forEachIndexed { paragraphIndex, paragraph ->
+            document.sections.forEach { section ->
+                section.paragraphs.forEachIndexed { paragraphIndex, paragraph ->
                     splitParagraph(paragraph.text).forEach { text ->
                         add(
                             SpeechChunk(
                                 id = nextId++,
-                                pageNumber = page.pageNumber,
+                                sectionIndex = section.index,
                                 paragraphIndex = paragraphIndex,
                                 text = text,
                             ),

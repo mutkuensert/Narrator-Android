@@ -1,10 +1,10 @@
 package com.mutkuensert.seslendirmen.di
 
+import com.mutkuensert.seslendirmen.data.document.LocalDocumentRepository
 import com.mutkuensert.seslendirmen.data.pdf.ConservativeTextPreprocessor
-import com.mutkuensert.seslendirmen.data.pdf.PdfBoxPdfRepository
 import com.mutkuensert.seslendirmen.data.pdf.MlKitOcrEngine
 import com.mutkuensert.seslendirmen.data.pdf.OcrEngine
-import com.mutkuensert.seslendirmen.domain.repository.PdfRepository
+import com.mutkuensert.seslendirmen.domain.repository.DocumentRepository
 import com.mutkuensert.seslendirmen.domain.repository.TextPreprocessor
 import dagger.Binds
 import dagger.Module
@@ -14,10 +14,10 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class PdfModule {
+abstract class DocumentModule {
     @Binds
     @Singleton
-    abstract fun bindPdfRepository(implementation: PdfBoxPdfRepository): PdfRepository
+    abstract fun bindDocumentRepository(implementation: LocalDocumentRepository): DocumentRepository
 
     @Binds
     @Singleton

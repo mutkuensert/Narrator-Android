@@ -7,14 +7,14 @@ import com.mutkuensert.seslendirmen.data.playback.TtsPlaybackService
 import com.mutkuensert.seslendirmen.data.preferences.LastReadPositionStore
 import com.mutkuensert.seslendirmen.data.preferences.TtsPreferences
 import com.mutkuensert.seslendirmen.domain.model.LastReadPosition
-import com.mutkuensert.seslendirmen.domain.model.PdfDocument
+import com.mutkuensert.seslendirmen.domain.model.Document
 import com.mutkuensert.seslendirmen.domain.model.SpeechChunk
 import com.mutkuensert.seslendirmen.domain.playback.PlaybackState
-import com.mutkuensert.seslendirmen.domain.repository.PdfReadException
-import com.mutkuensert.seslendirmen.domain.repository.PdfExtractionProgress
+import com.mutkuensert.seslendirmen.domain.repository.DocumentReadException
+import com.mutkuensert.seslendirmen.domain.repository.DocumentExtractionProgress
 import com.mutkuensert.seslendirmen.domain.repository.SpeechChunker
 import com.mutkuensert.seslendirmen.domain.playback.TtsPlaybackController
-import com.mutkuensert.seslendirmen.domain.usecase.OpenPdfDocument
+import com.mutkuensert.seslendirmen.domain.usecase.OpenDocument
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -28,7 +28,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     @param:ApplicationContext private val applicationContext: Context,
-    private val openPdfDocument: OpenPdfDocument,
+    private val openDocument: OpenDocument,
     private val speechChunker: SpeechChunker,
     private val playbackController: TtsPlaybackController,
     private val lastReadPositionStore: LastReadPositionStore,
@@ -67,7 +67,7 @@ class ReaderViewModel @Inject constructor(
         loadingJob = viewModelScope.launch {
             _uiState.value = ReaderUiState.Loading()
             try {
-                val document = openPdfDocument(uri) { progress ->
+                val document = openDocument(uri) { progress ->
                     _uiState.value = ReaderUiState.Loading(progress)
                 }
                 chunks = speechChunker.createChunks(document)
@@ -91,8 +91,8 @@ class ReaderViewModel @Inject constructor(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
-                val message = (error as? PdfReadException)?.reason?.message
-                    ?: PdfReadException.Reason.UNKNOWN.message
+                val message = (error as? DocumentReadException)?.reason?.message
+                    ?: DocumentReadException.Reason.UNKNOWN.message
                 _uiState.value = ReaderUiState.Error(message)
             }
         }
@@ -123,9 +123,9 @@ class ReaderViewModel @Inject constructor(
         _uiState.value = content.copy(showShorterDocumentWarning = false)
     }
 
-    fun playFromParagraph(pageNumber: Int, paragraphIndex: Int) {
+    fun playFromParagraph(sectionIndex: Int, paragraphIndex: Int) {
         val firstChunk = chunks.firstOrNull {
-            it.pageNumber == pageNumber && it.paragraphIndex == paragraphIndex
+            it.sectionIndex == sectionIndex && it.paragraphIndex == paragraphIndex
         } ?: return
         TtsPlaybackService.playFrom(applicationContext, currentFileName, firstChunk.id)
     }
@@ -140,9 +140,9 @@ private fun PlaybackState.activeChunk(): SpeechChunk? = when (this) {
 
 sealed interface ReaderUiState {
     data object Empty : ReaderUiState
-    data class Loading(val progress: PdfExtractionProgress? = null) : ReaderUiState
+    data class Loading(val progress: DocumentExtractionProgress? = null) : ReaderUiState
     data class Content(
-        val document: PdfDocument,
+        val document: Document,
         val chunkCount: Int,
         val restoredChunk: SpeechChunk? = null,
         val showShorterDocumentWarning: Boolean = false,
