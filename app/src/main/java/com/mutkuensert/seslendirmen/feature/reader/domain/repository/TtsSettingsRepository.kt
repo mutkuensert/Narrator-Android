@@ -1,8 +1,12 @@
 package com.mutkuensert.seslendirmen.feature.reader.domain.repository
 
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.TtsLanguage
+import kotlinx.coroutines.flow.StateFlow
 
 interface TtsSettingsRepository {
+    val numSteps: StateFlow<Int>
+    val language: StateFlow<TtsLanguage>
+
     fun readNumSteps(): Int
     fun saveNumSteps(value: Int)
     fun readLanguage(): TtsLanguage

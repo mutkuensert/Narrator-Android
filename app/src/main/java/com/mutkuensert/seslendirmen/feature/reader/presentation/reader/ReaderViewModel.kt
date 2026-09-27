@@ -3,7 +3,6 @@ package com.mutkuensert.seslendirmen.feature.reader.presentation.reader
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.LastReadPosition
-import com.mutkuensert.seslendirmen.feature.reader.domain.model.LegalDocumentType
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.Document
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.SpeechChunk
 import com.mutkuensert.seslendirmen.feature.reader.domain.model.TtsLanguage
@@ -13,17 +12,18 @@ import com.mutkuensert.seslendirmen.feature.reader.domain.repository.DocumentRea
 import com.mutkuensert.seslendirmen.feature.reader.domain.repository.DocumentExtractionProgress
 import com.mutkuensert.seslendirmen.feature.reader.domain.repository.DocumentRepository
 import com.mutkuensert.seslendirmen.feature.reader.domain.repository.LastReadPositionRepository
-import com.mutkuensert.seslendirmen.feature.reader.domain.repository.LegalDocumentRepository
 import com.mutkuensert.seslendirmen.feature.reader.domain.repository.SpeechChunker
-import com.mutkuensert.seslendirmen.feature.reader.domain.repository.TtsQuality
 import com.mutkuensert.seslendirmen.feature.reader.domain.repository.TtsSettingsRepository
 import com.mutkuensert.seslendirmen.feature.reader.domain.playback.TtsPlaybackController
+import com.mutkuensert.seslendirmen.navigation.Navigator
+import com.mutkuensert.seslendirmen.navigation.SettingsRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,23 +35,14 @@ class ReaderViewModel @Inject constructor(
     private val playbackController: TtsPlaybackController,
     private val playbackServiceController: PlaybackServiceController,
     private val lastReadPositionRepository: LastReadPositionRepository,
-    private val legalDocumentRepository: LegalDocumentRepository,
     private val ttsSettingsRepository: TtsSettingsRepository,
+    private val navigator: Navigator,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Empty)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
     val playbackState = playbackController.state
-    val savedPositions = lastReadPositionRepository.positions
-    private val _numSteps = MutableStateFlow(ttsSettingsRepository.readNumSteps())
-    val numSteps: StateFlow<Int> = _numSteps.asStateFlow()
-    private val _ttsLanguage = MutableStateFlow(ttsSettingsRepository.readLanguage())
-    val ttsLanguage: StateFlow<TtsLanguage> = _ttsLanguage.asStateFlow()
-    private val _legalDocumentState = MutableStateFlow<LegalDocumentUiState>(
-        LegalDocumentUiState.Idle,
-    )
-    val legalDocumentState: StateFlow<LegalDocumentUiState> = _legalDocumentState.asStateFlow()
+    val ttsLanguage = ttsSettingsRepository.language
     private var loadingJob: Job? = null
-    private var legalDocumentJob: Job? = null
     private var chunks: List<SpeechChunk> = emptyList()
     private var currentFileName: String? = null
 
@@ -69,6 +60,23 @@ class ReaderViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            ttsSettingsRepository.numSteps.drop(1).collect {
+                handleNumStepsUpdated()
+            }
+        }
+        viewModelScope.launch {
+            ttsLanguage.drop(1).collect(::handleTtsLanguageUpdated)
+        }
+        viewModelScope.launch {
+            lastReadPositionRepository.positions.drop(1).collect { positions ->
+                val fileName = currentFileName ?: return@collect
+                if (positions.none { it.fileName == fileName }) {
+                    val content = _uiState.value as? ReaderUiState.Content ?: return@collect
+                    _uiState.update { content.copy(restoredChunk = null) }
+                }
+            }
+        }
     }
 
     fun handleOpenDocument(uri: String) {
@@ -82,7 +90,7 @@ class ReaderViewModel @Inject constructor(
                 val document = documentRepository.openDocument(uri) { progress ->
                     _uiState.update { ReaderUiState.Loading(progress) }
                 }
-                chunks = speechChunker.createChunks(document, _ttsLanguage.value)
+                chunks = speechChunker.createChunks(document, ttsLanguage.value)
                 currentFileName = document.fileName ?: document.title
                 val savedPosition = currentFileName?.let(lastReadPositionRepository::read)
                 val openedFileIsShorter = savedPosition != null &&
@@ -115,13 +123,9 @@ class ReaderViewModel @Inject constructor(
     fun handleStop() = playbackServiceController.stop()
     fun handleNext() = playbackServiceController.next(currentFileName)
     fun handlePrevious() = playbackServiceController.previous(currentFileName)
+    fun handleOpenSettings() = navigator.navigateToRoute(SettingsRoute)
 
-    fun handleNumStepsChanged(value: Int) {
-        val newValue = TtsQuality.validatedNumSteps(value)
-        if (newValue == _numSteps.value) return
-        ttsSettingsRepository.saveNumSteps(newValue)
-        _numSteps.update { newValue }
-
+    private fun handleNumStepsUpdated() {
         // Clear audio created with the old setting while preserving the reading position.
         if (chunks.isNotEmpty()) {
             val currentChunkId = playbackState.value.activeChunk()?.id
@@ -130,11 +134,7 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun handleTtsLanguageChanged(language: TtsLanguage) {
-        if (language == _ttsLanguage.value) return
-        ttsSettingsRepository.saveLanguage(language)
-        _ttsLanguage.update { language }
-
+    private fun handleTtsLanguageUpdated(language: TtsLanguage) {
         val content = _uiState.value as? ReaderUiState.Content ?: return
         val previousChunk = playbackState.value.activeChunk() ?: content.restoredChunk
         chunks = speechChunker.createChunks(content.document, language)
@@ -164,13 +164,6 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { content.copy(showShorterDocumentWarning = false) }
     }
 
-    fun handleClearSavedPosition(fileName: String) {
-        lastReadPositionRepository.clear(fileName)
-        if (currentFileName != fileName) return
-        val content = _uiState.value as? ReaderUiState.Content ?: return
-        _uiState.update { content.copy(restoredChunk = null) }
-    }
-
     fun handlePlayFromParagraph(sectionIndex: Int, paragraphIndex: Int) {
         val firstChunk = chunks.firstOrNull {
             it.sectionIndex == sectionIndex && it.paragraphIndex == paragraphIndex
@@ -178,19 +171,6 @@ class ReaderViewModel @Inject constructor(
         playbackServiceController.playFrom(currentFileName, firstChunk.id)
     }
 
-    fun handleLegalDocumentSelected(document: LegalDocumentType) {
-        legalDocumentJob?.cancel()
-        legalDocumentJob = viewModelScope.launch {
-            _legalDocumentState.update { LegalDocumentUiState.Loading }
-            runCatching { legalDocumentRepository.read(document) }
-                .onSuccess { text ->
-                    _legalDocumentState.update { LegalDocumentUiState.Content(text) }
-                }
-                .onFailure {
-                    _legalDocumentState.update { LegalDocumentUiState.Error }
-                }
-        }
-    }
 }
 
 private fun PlaybackState.activeChunk(): SpeechChunk? = when (this) {
@@ -210,11 +190,4 @@ sealed interface ReaderUiState {
         val showShorterDocumentWarning: Boolean = false,
     ) : ReaderUiState
     data class Error(val reason: DocumentReadException.Reason) : ReaderUiState
-}
-
-sealed interface LegalDocumentUiState {
-    data object Idle : LegalDocumentUiState
-    data object Loading : LegalDocumentUiState
-    data class Content(val text: String) : LegalDocumentUiState
-    data object Error : LegalDocumentUiState
 }
