@@ -2,8 +2,8 @@ package com.mutkuensert.seslendirmen.presentation.reader
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,19 +35,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mutkuensert.seslendirmen.data.preferences.TtsPreferences
 import com.mutkuensert.seslendirmen.domain.model.Document
 import com.mutkuensert.seslendirmen.domain.model.DocumentFormat
 import com.mutkuensert.seslendirmen.domain.model.SpeechChunk
 import com.mutkuensert.seslendirmen.domain.playback.PlaybackState
 import com.mutkuensert.seslendirmen.domain.repository.DocumentExtractionProgress
-import com.mutkuensert.seslendirmen.data.preferences.TtsPreferences
 import kotlinx.coroutines.launch
 
 @Composable
@@ -101,8 +101,8 @@ private fun ReaderScreen(
             text = {
                 Text(
                     "Aynı isimli bu belge, daha önce açılan belgeden daha kısa. " +
-                        "Eski konum uygulanmadı. Bundan sonra bu belgede son okuduğunuz yer " +
-                        "kaydedilecek.",
+                            "Eski konum uygulanmadı. Bundan sonra bu belgede son okuduğunuz yer " +
+                            "kaydedilecek.",
                 )
             },
             confirmButton = {
@@ -170,6 +170,7 @@ private fun ReaderScreen(
                     listState = listState,
                     onParagraphClick = onParagraphClick,
                 )
+
                 is ReaderUiState.Error -> ErrorDocument(state.message, onSelectDocument)
             }
         }
@@ -191,7 +192,10 @@ private fun QualityDialog(
             Column {
                 Text("Adım sayısı: $steps")
                 Text(
-                    text = "Yüksek değer daha kaliteli ses üretebilir, ancak hazırlanması daha uzun sürer.",
+                    text = "Yüksek değerlerde ses daha doğal duyulur, ancak hazırlanması daha uzun " +
+                            "sürebilir ve cihazınızı daha fazla yorabilir. Düşük değerlerde ses daha " +
+                            "çabuk hazırlanır ve cihazınız daha az zorlanır; sesin doğallığı ise " +
+                            "azalabilir. Dengeli bir deneyim için 5 veya 6 önerilir.",
                     modifier = Modifier.padding(top = 8.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -200,11 +204,14 @@ private fun QualityDialog(
                     value = selectedSteps,
                     onValueChange = { selectedSteps = it },
                     valueRange = TtsPreferences.MIN_NUM_STEPS.toFloat()..
-                        TtsPreferences.MAX_NUM_STEPS.toFloat(),
+                            TtsPreferences.MAX_NUM_STEPS.toFloat(),
                     steps = TtsPreferences.MAX_NUM_STEPS - TtsPreferences.MIN_NUM_STEPS - 1,
                     modifier = Modifier.padding(top = 12.dp),
                 )
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text("Hızlı", style = MaterialTheme.typography.labelSmall)
                     Text("Kaliteli", style = MaterialTheme.typography.labelSmall)
                 }
@@ -243,24 +250,28 @@ private fun PlaybackControls(
             when (state) {
                 is PlaybackState.Preparing -> Text(
                     "Ses hazırlanıyor • Parça ${state.chunk.id + 1}/$chunkCount • " +
-                        document.locationLabel(state.chunk.sectionIndex),
+                            document.locationLabel(state.chunk.sectionIndex),
                 )
+
                 is PlaybackState.Playing -> Text(
                     "Oynatılıyor • Parça ${state.chunk.id + 1}/$chunkCount • " +
-                        document.locationLabel(state.chunk.sectionIndex),
+                            document.locationLabel(state.chunk.sectionIndex),
                 )
+
                 is PlaybackState.Paused -> Text(
                     "Duraklatıldı • Parça ${state.chunk.id + 1}/$chunkCount • " +
-                        document.locationLabel(state.chunk.sectionIndex),
+                            document.locationLabel(state.chunk.sectionIndex),
                 )
+
                 is PlaybackState.Error -> Text(
                     state.error.message,
                     color = MaterialTheme.colorScheme.error,
                 )
+
                 PlaybackState.Idle -> Text(
                     restoredChunk?.let {
                         "Kaldığınız yer hazır • Parça ${it.id + 1}/$chunkCount • " +
-                            document.locationLabel(it.sectionIndex)
+                                document.locationLabel(it.sectionIndex)
                     } ?: "$chunkCount konuşma bölümü hazır",
                 )
             }
@@ -292,7 +303,7 @@ private fun PlaybackControls(
                 TextButton(
                     onClick = onNext,
                     enabled = chunkCount > 1 &&
-                        (activeChunk == null || activeChunk.id < chunkCount.toLong() - 1L),
+                            (activeChunk == null || activeChunk.id < chunkCount.toLong() - 1L),
                 ) {
                     Text("İleri")
                 }
@@ -338,10 +349,13 @@ private fun LoadingDocument(progress: DocumentExtractionProgress?) {
         val message = when (progress?.stage) {
             DocumentExtractionProgress.Stage.EXTRACTING_TEXT ->
                 "Sayfa ${progress.sectionNumber}/${progress.sectionCount} okunuyor…"
+
             DocumentExtractionProgress.Stage.RECOGNIZING_SCAN ->
                 "Sayfa ${progress.sectionNumber}/${progress.sectionCount} taranmış metin olarak tanınıyor…"
+
             DocumentExtractionProgress.Stage.PARSING_EPUB ->
                 "EPUB bölümü ${progress.sectionNumber}/${progress.sectionCount} okunuyor…"
+
             null -> "Belge hazırlanıyor…"
         }
         Text(message, modifier = Modifier.padding(top = 16.dp))
@@ -406,7 +420,7 @@ private fun DocumentText(
                 key = { index, _ -> "paragraph-${section.index}-$index" },
             ) { paragraphIndex, paragraph ->
                 val isActive = activeChunk?.sectionIndex == section.index &&
-                    activeChunk.paragraphIndex == paragraphIndex
+                        activeChunk.paragraphIndex == paragraphIndex
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
