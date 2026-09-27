@@ -11,16 +11,16 @@ import android.util.Log
 import com.mutkuensert.seslendirmen.domain.model.AudioData
 import com.mutkuensert.seslendirmen.domain.playback.AudioPlaybackException
 import com.mutkuensert.seslendirmen.domain.playback.AudioPlayer
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.coroutines.coroutineContext
 import kotlin.math.max
+import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class AudioTrackPlayer @Inject constructor(
@@ -28,9 +28,12 @@ class AudioTrackPlayer @Inject constructor(
 ) : AudioPlayer {
     private val lock = Any()
     private val audioManager = context.getSystemService(AudioManager::class.java)
-    @Volatile private var activeTrack: AudioTrack? = null
-    @Volatile private var hasAudioFocus = false
-    @Volatile private var pausedForFocusLoss = false
+    @Volatile
+    private var activeTrack: AudioTrack? = null
+    @Volatile
+    private var hasAudioFocus = false
+    @Volatile
+    private var pausedForFocusLoss = false
 
     private val focusChangeListener = AudioManager.OnAudioFocusChangeListener { change ->
         when (change) {
@@ -43,12 +46,19 @@ class AudioTrackPlayer @Inject constructor(
                 track?.takeIf { it.playState == AudioTrack.PLAYSTATE_PAUSED }?.let {
                     runCatching { it.play() }
                         .onSuccess { Log.i(TAG, "Audio focus gained; playback resumed") }
-                        .onFailure { error -> Log.e(TAG, "Could not resume after focus gain", error) }
+                        .onFailure { error ->
+                            Log.e(
+                                TAG,
+                                "Could not resume after focus gain",
+                                error
+                            )
+                        }
                 }
             }
+
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK,
-            -> {
+                -> {
                 hasAudioFocus = false
                 val track = synchronized(lock) { activeTrack }
                 pausedForFocusLoss = track?.playState == AudioTrack.PLAYSTATE_PLAYING
@@ -57,6 +67,7 @@ class AudioTrackPlayer @Inject constructor(
                     Log.i(TAG, "Audio focus lost temporarily; playback paused")
                 }
             }
+
             AudioManager.AUDIOFOCUS_LOSS -> {
                 hasAudioFocus = false
                 pausedForFocusLoss = false
@@ -66,86 +77,88 @@ class AudioTrackPlayer @Inject constructor(
         }
     }
 
-    private val focusRequest: AudioFocusRequest? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-            .setAudioAttributes(PLAYBACK_ATTRIBUTES)
-            .setOnAudioFocusChangeListener(focusChangeListener)
-            .setWillPauseWhenDucked(true)
-            .build()
-    } else {
-        null
-    }
-
-    override suspend fun play(audio: AudioData, onStarted: () -> Unit) = withContext(Dispatchers.IO) {
-        stopActiveTrack()
-        if (!requestAudioFocus()) throw AudioPlaybackException()
-        val minimumBufferSize = AudioTrack.getMinBufferSize(
-            audio.sampleRate,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_FLOAT,
-        )
-        if (minimumBufferSize <= 0) throw AudioPlaybackException()
-
-        val track = try {
-            AudioTrack.Builder()
-                .setAudioAttributes(
-                    PLAYBACK_ATTRIBUTES,
-                )
-                .setAudioFormat(
-                    AudioFormat.Builder()
-                        .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                        .setSampleRate(audio.sampleRate)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build(),
-                )
-                .setBufferSizeInBytes(max(minimumBufferSize, STREAM_BUFFER_BYTES))
-                .setTransferMode(AudioTrack.MODE_STREAM)
+    private val focusRequest: AudioFocusRequest? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(PLAYBACK_ATTRIBUTES)
+                .setOnAudioFocusChangeListener(focusChangeListener)
+                .setWillPauseWhenDucked(true)
                 .build()
-        } catch (error: Throwable) {
-            throw AudioPlaybackException(error)
+        } else {
+            null
         }
 
-        synchronized(lock) { activeTrack = track }
-        try {
-            check(track.state == AudioTrack.STATE_INITIALIZED) {
-                "AudioTrack was not initialized: sampleRate=${audio.sampleRate}, " +
-                    "minBufferSize=$minimumBufferSize"
-            }
-            track.play()
-            Log.i(
-                TAG,
-                "Playback started: routedDevice=${track.routedDevice?.productName}, " +
-                    "deviceType=${track.routedDevice?.type}, sampleRate=${audio.sampleRate}",
+    override suspend fun play(audio: AudioData, onStarted: () -> Unit) =
+        withContext(Dispatchers.IO) {
+            stopActiveTrack()
+            if (!requestAudioFocus()) throw AudioPlaybackException()
+            val minimumBufferSize = AudioTrack.getMinBufferSize(
+                audio.sampleRate,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_FLOAT,
             )
-            onStarted()
-            var offset = 0
-            while (offset < audio.samples.size) {
-                coroutineContext.ensureActive()
-                val written = track.write(
-                    audio.samples,
-                    offset,
-                    minOf(4096, audio.samples.size - offset),
-                    AudioTrack.WRITE_BLOCKING,
+            if (minimumBufferSize <= 0) throw AudioPlaybackException()
+
+            val track = try {
+                AudioTrack.Builder()
+                    .setAudioAttributes(
+                        PLAYBACK_ATTRIBUTES,
+                    )
+                    .setAudioFormat(
+                        AudioFormat.Builder()
+                            .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
+                            .setSampleRate(audio.sampleRate)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                            .build(),
+                    )
+                    .setBufferSizeInBytes(max(minimumBufferSize, STREAM_BUFFER_BYTES))
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build()
+            } catch (error: Throwable) {
+                throw AudioPlaybackException(error)
+            }
+
+            synchronized(lock) { activeTrack = track }
+            try {
+                check(track.state == AudioTrack.STATE_INITIALIZED) {
+                    "AudioTrack was not initialized: sampleRate=${audio.sampleRate}, " +
+                            "minBufferSize=$minimumBufferSize"
+                }
+                track.play()
+                Log.i(
+                    TAG,
+                    "Playback started: routedDevice=${track.routedDevice?.productName}, " +
+                            "deviceType=${track.routedDevice?.type}, sampleRate=${audio.sampleRate}",
                 )
-                if (written < 0) error("AudioTrack write failed: $written")
-                offset += written
+                onStarted()
+                var offset = 0
+                while (offset < audio.samples.size) {
+                    coroutineContext.ensureActive()
+                    val written = track.write(
+                        audio.samples,
+                        offset,
+                        minOf(4096, audio.samples.size - offset),
+                        AudioTrack.WRITE_BLOCKING,
+                    )
+                    if (written < 0) error("AudioTrack write failed: $written")
+                    offset += written
+                }
+                while (track.playbackHeadPosition < audio.samples.size) {
+                    coroutineContext.ensureActive()
+                    delay(20.milliseconds)
+                }
+                track.stop()
+            } catch (error: Throwable) {
+                if (error is CancellationException) throw error
+                Log.e(TAG, "Audio playback failed", error)
+                throw AudioPlaybackException(error)
+            } finally {
+                synchronized(lock) {
+                    if (activeTrack === track) activeTrack = null
+                }
+                runCatching { track.release() }
             }
-            while (track.playbackHeadPosition < audio.samples.size) {
-                coroutineContext.ensureActive()
-                delay(20)
-            }
-            track.stop()
-        } catch (error: Throwable) {
-            if (error is CancellationException) throw error
-            Log.e(TAG, "Audio playback failed", error)
-            throw AudioPlaybackException(error)
-        } finally {
-            synchronized(lock) {
-                if (activeTrack === track) activeTrack = null
-            }
-            runCatching { track.release() }
         }
-    }
 
     override fun pause() {
         pausedForFocusLoss = false

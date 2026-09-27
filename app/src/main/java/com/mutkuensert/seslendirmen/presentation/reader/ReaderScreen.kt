@@ -282,7 +282,7 @@ private fun PlaybackControls(
                     onClick = onPrevious,
                     enabled = chunkCount > 1 && (activeChunk == null || activeChunk.id > 0),
                 ) { Text("Geri") }
-                if (state is PlaybackState.Playing) {
+                if (state is PlaybackState.Playing || state is PlaybackState.Preparing) {
                     Button(onClick = onPause) { Text("Duraklat") }
                 } else {
                     Button(onClick = onPlay, enabled = chunkCount > 0) {

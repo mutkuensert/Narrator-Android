@@ -87,7 +87,7 @@ class BufferedTtsPlaybackController @Inject constructor(
     override fun play() {
         val paused = synchronized(lock) {
             val currentState = _state.value
-            if (currentState is PlaybackState.Paused) {
+            if (currentState is PlaybackState.Paused && playbackJob != null) {
                 _state.value = PlaybackState.Playing(currentState.chunk)
                 true
             } else {
@@ -107,12 +107,24 @@ class BufferedTtsPlaybackController @Inject constructor(
     }
 
     override fun pause() {
-        val chunk = synchronized(lock) {
-            (_state.value as? PlaybackState.Playing)?.chunk?.also {
-                _state.value = PlaybackState.Paused(it)
+        val (jobToCancel, shouldPausePlayer) = synchronized(lock) {
+            when (val state = _state.value) {
+                is PlaybackState.Playing -> {
+                    _state.value = PlaybackState.Paused(state.chunk)
+                    null to true
+                }
+                is PlaybackState.Preparing -> {
+                    playbackVersion++
+                    val job = playbackJob
+                    playbackJob = null
+                    _state.value = PlaybackState.Paused(state.chunk)
+                    job to false
+                }
+                else -> null to false
             }
-        } ?: return
-        audioPlayer.pause()
+        }
+        jobToCancel?.cancel()
+        if (shouldPausePlayer) audioPlayer.pause()
     }
 
     override fun stop() {
