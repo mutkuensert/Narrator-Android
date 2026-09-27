@@ -54,7 +54,7 @@ private fun TtsTestScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
-                text = "tr_TR-dfki-medium modeli cihaz üzerinde çalışır. İnternet bağlantısı kullanılmaz.",
+                text = "Supertonic 3 modeli cihaz üzerinde çalışır. İnternet bağlantısı kullanılmaz.",
                 style = MaterialTheme.typography.bodyLarge,
             )
             OutlinedTextField(
