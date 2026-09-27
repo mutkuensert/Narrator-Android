@@ -1,0 +1,73 @@
+SESLENDIRMEN - THIRD-PARTY NOTICES
+=================================
+
+The notices below apply to the listed third-party components. They do not change the license of the
+application source code. Copyright notices and license terms belong to their respective owners.
+
+1. SUPERTONIC 3 MODEL
+---------------------
+Component: Supertonic 3 model weights, configuration, Unicode index, and voice-style data
+Copyright/author: Supertone Inc. and the model contributors
+Upstream: https://huggingface.co/Supertone/supertonic-3
+Local files: app/src/main/assets/tts/supertonic3/
+License: BigScience Open RAIL-M License
+Full license in the application: tts/supertonic3/LICENSE
+
+The model license contains use-based restrictions. In particular, users and redistributors must
+comply with Section III and Attachment A of the included Open RAIL-M license. The application code's
+Apache-2.0 license does not apply to these model assets.
+
+The local ONNX weights are the INT8 conversion distributed by sherpa-onnx as
+"sherpa-onnx-supertonic-3-tts-int8-2026-05-11". This conversion differs from the original upstream
+floating-point weights. The Seslendirmen project has not made further modifications to the files;
+their SHA-256 checksums are recorded in tts/supertonic3/MODEL_CARD.md.
+
+2. SHERPA-ONNX
+---------------
+Component: sherpa-onnx 1.13.8 Android runtime
+Project: https://github.com/k2-fsa/sherpa-onnx
+Copyright: sherpa-onnx contributors
+License: Apache License 2.0
+Full license in the application: legal/APACHE-2.0.txt
+
+3. ONNX RUNTIME
+----------------
+Component: ONNX Runtime native libraries embedded in the sherpa-onnx Android archive
+Project: https://github.com/microsoft/onnxruntime
+Copyright (c) Microsoft Corporation
+License: MIT License
+Full license in the application: legal/MIT-ONNXRUNTIME.txt
+
+4. GOOGLE ML KIT TEXT RECOGNITION
+----------------------------------
+Component: com.google.mlkit:text-recognition:16.0.1 and its runtime dependencies
+Terms: https://developers.google.com/ml-kit/terms
+Google APIs Terms: https://developers.google.com/terms
+
+ML Kit is subject to Google's applicable terms. It is not relicensed by this project. The app uses
+the bundled on-device text-recognition model and removes the INTERNET and ACCESS_NETWORK_STATE
+permissions from its merged manifest.
+
+5. ANDROIDX, JETPACK COMPOSE, DAGGER/HILT, KOTLIN, AND RELATED COMPONENTS
+----------------------------------------------------------------------------
+These components and most of their runtime dependencies are distributed under Apache License 2.0.
+Their original copyright and attribution notices remain applicable.
+Full Apache License 2.0 text in the application: legal/APACHE-2.0.txt
+
+6. PDFBOX-ANDROID
+------------------
+Component: com.tom-roush:pdfbox-android:2.0.27.0
+Project: https://github.com/TomRoush/PdfBox-Android
+License: Apache License 2.0
+Full license in the application: legal/APACHE-2.0.txt
+
+7. BOUNCY CASTLE
+-----------------
+Components: bcprov-jdk15to18, bcpkix-jdk15to18, and bcutil-jdk15to18 version 1.72
+Project: https://www.bouncycastle.org/
+Copyright (c) 2000-2022 The Legion of the Bouncy Castle Inc.
+License: Bouncy Castle License, an MIT-style license
+Full license in the application: legal/BOUNCY-CASTLE.txt
+
+This notice describes the direct runtime dependencies reviewed for this release. When dependencies
+are upgraded or added, regenerate and review the release dependency inventory and update this file.

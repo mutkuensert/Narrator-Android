@@ -1,8 +1,11 @@
 package com.mutkuensert.seslendirmen.presentation.reader
 
+import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +13,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,6 +44,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mutkuensert.seslendirmen.data.preferences.TtsPreferences
@@ -94,6 +99,7 @@ private fun ReaderScreen(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var showQualityDialog by rememberSaveable { mutableStateOf(false) }
+    var showLegalDialog by rememberSaveable { mutableStateOf(false) }
     if (state is ReaderUiState.Content && state.showShorterDocumentWarning) {
         AlertDialog(
             onDismissRequest = onDismissShorterDocumentWarning,
@@ -120,11 +126,17 @@ private fun ReaderScreen(
             onDismiss = { showQualityDialog = false },
         )
     }
+    if (showLegalDialog) {
+        LegalNoticesDialog(onDismiss = { showLegalDialog = false })
+    }
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(title, maxLines = 1) },
                 actions = {
+                    TextButton(onClick = { showLegalDialog = true }) {
+                        Text("Yasal")
+                    }
                     TextButton(onClick = { showQualityDialog = true }) {
                         Text("Kalite: $numSteps")
                     }
@@ -176,6 +188,57 @@ private fun ReaderScreen(
         }
     }
 }
+
+private enum class LegalDocument(val label: String, val assetPath: String) {
+    NOTICES("Bildirimler", "legal/THIRD_PARTY_NOTICES.txt"),
+    MODEL_LICENSE("Model lisansı", "tts/supertonic3/LICENSE"),
+    APACHE("Apache-2.0", "legal/APACHE-2.0.txt"),
+    ONNX_RUNTIME("ONNX Runtime", "legal/MIT-ONNXRUNTIME.txt"),
+    BOUNCY_CASTLE("Bouncy Castle", "legal/BOUNCY-CASTLE.txt"),
+}
+
+@Composable
+private fun LegalNoticesDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var selectedDocument by rememberSaveable { mutableStateOf(LegalDocument.NOTICES) }
+    val documentText = remember(selectedDocument) {
+        readAssetText(context, selectedDocument.assetPath)
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Lisanslar ve yasal bildirimler") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LegalDocument.entries.forEach { document ->
+                    TextButton(
+                        onClick = { selectedDocument = document },
+                        enabled = document != selectedDocument,
+                    ) {
+                        Text(document.label)
+                    }
+                }
+                HorizontalDivider()
+                Text(
+                    text = documentText,
+                    modifier = Modifier
+                        .heightIn(max = 360.dp)
+                        .verticalScroll(rememberScrollState()),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Kapat") }
+        },
+    )
+}
+
+private fun readAssetText(context: Context, assetPath: String): String =
+    runCatching {
+        context.assets.open(assetPath).bufferedReader().use { it.readText() }
+    }.getOrElse {
+        "Yasal belge yüklenemedi: ${it.message ?: "bilinmeyen hata"}"
+    }
 
 @Composable
 private fun QualityDialog(
