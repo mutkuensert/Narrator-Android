@@ -7,6 +7,13 @@ pages can be processed with the bundled Google ML Kit text-recognition component
 The app does not request Internet access. Documents, recognized text, and generated speech remain
 on the device.
 
+## Privacy
+
+The app's data practices are described in the [Privacy Policy](PRIVACY_POLICY.md). The same policy
+is bundled with the application and can be opened from **Yasal > Gizlilik**. Before a Google Play
+release, publish this file at a stable, publicly accessible web URL and enter that URL in Play
+Console.
+
 ## Licensing
 
 The source code written for this repository is licensed under the Apache License 2.0; see
@@ -37,4 +44,3 @@ model itself as Apache-2.0 licensed.
 The bundled INT8 model files come from the sherpa-onnx distribution
 `sherpa-onnx-supertonic-3-tts-int8-2026-05-11`. The upstream model is Supertonic 3 by Supertone.
 Checksums and modification information are recorded in the model card next to the weights.
-

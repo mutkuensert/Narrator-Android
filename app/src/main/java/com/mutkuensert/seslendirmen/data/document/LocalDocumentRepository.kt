@@ -49,7 +49,7 @@ class LocalDocumentRepository @Inject constructor(
                 Intent.FLAG_GRANT_READ_URI_PERMISSION,
             )
         }.onFailure { error ->
-            Log.w(TAG, "Provider did not grant persistable access for $uri", error)
+            Log.w(TAG, "Provider did not grant persistable document access", error)
         }
     }
 

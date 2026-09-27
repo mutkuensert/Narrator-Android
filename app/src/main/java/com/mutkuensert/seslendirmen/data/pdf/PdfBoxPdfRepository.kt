@@ -125,7 +125,7 @@ class PdfBoxPdfRepository @Inject constructor(
                         ?.trim()
                         ?.takeIf(String::isNotEmpty)
                         ?: fileName?.substringBeforeLast('.')
-                    Log.i(TAG, "Extracted ${pages.size} pages in $elapsedMs ms from $title")
+                    Log.i(TAG, "Extracted ${pages.size} pages in $elapsedMs ms")
                     Document(
                         title = title,
                         sections = pages,

@@ -175,7 +175,7 @@ class TtsPlaybackService : Service() {
             .setContentText(state.notificationText())
             .setContentIntent(contentPendingIntent())
             .setCategory(Notification.CATEGORY_TRANSPORT)
-            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setVisibility(Notification.VISIBILITY_PRIVATE)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
             .addAction(

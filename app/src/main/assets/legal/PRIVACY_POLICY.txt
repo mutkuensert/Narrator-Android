@@ -1,0 +1,89 @@
+SESLENDİRMEN GİZLİLİK POLİTİKASI
+
+Yürürlük ve son güncelleme tarihi: 27 Eylül 2026
+
+Bu politika, M. Utku Ensert ("geliştirici") tarafından sunulan Seslendirmen Android uygulamasını
+("uygulama") kapsar. Sorularınız için ensertyazilim@gmail.com adresinden iletişime geçebilirsiniz.
+
+KISA ÖZET
+
+Seslendirmen, kullanıcının seçtiği PDF ve EPUB belgelerini cihaz üzerinde işleyen çevrimdışı bir
+belge okuyucudur. Uygulama internet izni istemez; hesap, geliştirici sunucusu, reklam, kullanıcı
+izleme, Firebase Analytics veya Crashlytics içermez. Belgelerin içeriği, OCR ile tanınan metin ve
+üretilen konuşma geliştiriciye ya da Google'a gönderilmez. Bununla birlikte, aşağıda açıklandığı
+üzere uygulamada kullanılan Google ML Kit SDK'sı sınırlı teknik ölçümleri Google'a iletebilir.
+
+UYGULAMANIN ERİŞTİĞİ VE CİHAZDA İŞLEDİĞİ VERİLER
+
+• Kullanıcının seçtiği belgeler: Uygulama yalnızca Android'in sistem belge seçicisi üzerinden açıkça
+seçtiğiniz PDF veya EPUB dosyasını okur. Geniş kapsamlı depolama izni istemez. Belge içeriği; metin
+çıkarma, taranmış PDF sayfalarında OCR ve ses üretimi amacıyla cihazda işlenir.
+
+• Belge bilgileri ve okuma konumu: Son seçilen belgenin dosya adı ile son okunan bölümün kimliği ve
+toplam bölüm sayısı, kaldığınız yere dönebilmeniz için uygulamanın özel yerel tercihlerinde saklanır.
+Uygulama ayrıca seçilen belgeyi daha sonra tekrar okuyabilmek için Android belge sağlayıcısından
+kalıcı salt-okuma erişimi isteyebilir.
+
+• TTS tercihi: Seçtiğiniz konuşma üretim kalite/adım değeri cihazda saklanır.
+
+• Geçici veriler: Çıkarılmış metin, OCR için oluşturulan sayfa görüntüleri ve üretilen ses, özelliği
+çalıştırmak için cihazda geçici olarak işlenir; uygulama bunları geliştirici sunucusuna yüklemez veya
+ayrı kullanıcı dosyaları olarak kalıcı biçimde kaydetmez.
+
+• Oynatma bildirimi: Belgenin dosya adı, oynatma denetimlerini sunan özel görünürlüklü medya
+bildiriminde gösterilebilir. Bildirimin kilit ekranında nasıl gösterileceğini Android bildirim
+gizliliği ayarlarınız belirler.
+
+• Teknik günlükler: Uygulama; süre, sayfa sayısı ve hata bilgisi gibi sınırlı teknik kayıtları
+Android sistem günlüğüne yazabilir. Belge URI'si, dosya adı ve belge metni bilerek günlüğe yazılmaz.
+Uygulama bu günlükleri geliştiriciye otomatik olarak göndermez.
+
+Uygulama tarafından yönetilen yerel veriler için Android yedekleme özelliği devre dışı
+bırakılmıştır.
+
+ÜÇÜNCÜ TARAF İŞLEMESİ: GOOGLE ML KIT
+
+Taranmış PDF sayfalarındaki metni tanımak için paket içinde gelen Google ML Kit Text Recognition
+SDK'sı kullanılır. Google'ın açıklamasına göre giriş görüntüleri, metin ve sonuçlar tamamen cihazda
+işlenir ve Google sunucularına gönderilmez. Google ayrıca ML Kit'in teşhis ve kullanım analizi için
+cihaz ve uygulama bilgisi, kurulum başına tanımlayıcı, performans ölçümleri, API yapılandırması,
+girdi/çıktı boyutu, özellik sürümü, olay türü ve hata kodları gibi teknik verileri toplayabileceğini;
+bu verilerin aktarım sırasında HTTPS ile şifrelendiğini ve üçüncü taraflarla paylaşılmadığını
+belirtir. Geliştirici bu teknik ölçümleri almaz ve bunları reklam amacıyla kullanmaz.
+
+Google'ın güncel açıklamaları:
+https://developers.google.com/ml-kit/terms
+https://developers.google.com/ml-kit/android-data-disclosure
+https://policies.google.com/privacy
+
+sherpa-onnx/Supertonic 3 konuşma üretimi, PDFBox metin çıkarımı ve uygulamanın diğer belge işleme
+bileşenleri cihaz üzerinde çalışır. Uygulamada reklam SDK'sı bulunmaz.
+
+PAYLAŞIM, SATIŞ VE AMAÇLAR
+
+Geliştirici belgelerinizi, çıkarılan metni, üretilen sesi veya yerel tercihlerinizi toplamaz, satmaz
+ya da üçüncü taraflarla paylaşmaz. Uygulama bu verileri yalnızca istediğiniz belge okuma, OCR,
+konuşma üretimi, oynatma ve okuma konumunu geri yükleme işlevlerini sunmak için cihazda kullanır.
+ML Kit'in bağımsız teknik veri işlemesi bir önceki bölümde açıklanmıştır.
+
+SAKLAMA VE SİLME
+
+Belgenin kendisi seçtiğiniz depolama konumunda kalır ve uygulama tarafından silinmez. Dosya adı,
+okuma konumu, TTS tercihi ve kalıcı okuma izni; siz Android ayarlarından uygulama verilerini
+temizleyene veya uygulamayı kaldırana kadar cihazda kalabilir. Uygulama verilerini temizlemek ya da
+uygulamayı kaldırmak uygulamanın yönettiği yerel verileri siler ve belge erişimini kaldırır. Hesap ve
+geliştirici sunucusunda saklanan kullanıcı verisi bulunmadığından ayrıca sunucu taraflı silme talebi
+gerekmez. Google tarafından işlenen ML Kit teknik verileri için Google'ın gizlilik politikası ve
+saklama uygulamaları geçerlidir.
+
+ÇOCUKLARIN GİZLİLİĞİ
+
+Uygulama hiçbir kullanıcıdan bilerek kişisel veri toplamaz ve çocuklara yönelik davranışsal reklam
+sunmaz. Bir çocuk uygulamayı kullanırsa belge içeriği yine cihaz üzerinde işlenir; ML Kit'in teknik
+veri işlemesi yukarıdaki koşullara tabidir.
+
+DEĞİŞİKLİKLER VE İLETİŞİM
+
+Uygulamanın veri uygulamaları değişirse bu politika ve Google Play Veri Güvenliği beyanı sürüm
+yayımlanmadan önce güncellenecektir. Önemli değişiklikler güncellenen tarih ile belirtilecektir.
+Gizlilik soruları ve hak talepleri için: ensertyazilim@gmail.com

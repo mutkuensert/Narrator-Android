@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -26,6 +26,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -133,37 +135,33 @@ private fun ReaderScreen(
         topBar = {
             TopAppBar(
                 title = { Text(title, maxLines = 1) },
-                actions = {
-                    TextButton(onClick = { showLegalDialog = true }) {
-                        Text("Yasal")
-                    }
-                    TextButton(onClick = { showQualityDialog = true }) {
-                        Text("Kalite: $numSteps")
-                    }
-                    Button(
-                        onClick = onSelectDocument,
-                        modifier = Modifier.padding(end = 8.dp),
-                    ) {
-                        Text(if (state is ReaderUiState.Content) "Başka belge" else "Belge seç")
-                    }
-                },
             )
         },
         bottomBar = {
-            if (state is ReaderUiState.Content) {
-                PlaybackControls(
-                    state = playbackState,
-                    chunkCount = state.chunkCount,
-                    restoredChunk = state.restoredChunk,
-                    document = state.document,
-                    onPlay = onPlay,
-                    onPause = onPause,
-                    onStop = {
-                        onStop()
-                        coroutineScope.launch { listState.scrollToItem(0) }
-                    },
-                    onPrevious = onPrevious,
-                    onNext = onNext,
+            Column {
+                if (state is ReaderUiState.Content) {
+                    PlaybackControls(
+                        state = playbackState,
+                        chunkCount = state.chunkCount,
+                        restoredChunk = state.restoredChunk,
+                        document = state.document,
+                        onPlay = onPlay,
+                        onPause = onPause,
+                        onStop = {
+                            onStop()
+                            coroutineScope.launch { listState.scrollToItem(0) }
+                        },
+                        onPrevious = onPrevious,
+                        onNext = onNext,
+                    )
+                }
+                ReaderBottomNavigation(
+                    numSteps = numSteps,
+                    isLegalSelected = showLegalDialog,
+                    isQualitySelected = showQualityDialog,
+                    onLegalClick = { showLegalDialog = true },
+                    onQualityClick = { showQualityDialog = true },
+                    onSelectDocument = onSelectDocument,
                 )
             }
         },
@@ -174,7 +172,7 @@ private fun ReaderScreen(
                 .padding(padding),
         ) {
             when (state) {
-                ReaderUiState.Empty -> EmptyDocument(onSelectDocument)
+                ReaderUiState.Empty -> EmptyDocument()
                 is ReaderUiState.Loading -> LoadingDocument(state.progress)
                 is ReaderUiState.Content -> DocumentText(
                     document = state.document,
@@ -183,13 +181,45 @@ private fun ReaderScreen(
                     onParagraphClick = onParagraphClick,
                 )
 
-                is ReaderUiState.Error -> ErrorDocument(state.message, onSelectDocument)
+                is ReaderUiState.Error -> ErrorDocument(state.message)
             }
         }
     }
 }
 
+@Composable
+private fun ReaderBottomNavigation(
+    numSteps: Int,
+    isLegalSelected: Boolean,
+    isQualitySelected: Boolean,
+    onLegalClick: () -> Unit,
+    onQualityClick: () -> Unit,
+    onSelectDocument: () -> Unit,
+) {
+    NavigationBar {
+        NavigationBarItem(
+            selected = isLegalSelected,
+            onClick = onLegalClick,
+            icon = { Text("§", style = MaterialTheme.typography.titleMedium) },
+            label = { Text("Yasal") },
+        )
+        NavigationBarItem(
+            selected = isQualitySelected,
+            onClick = onQualityClick,
+            icon = { Text(numSteps.toString(), style = MaterialTheme.typography.titleMedium) },
+            label = { Text("Kalite") },
+        )
+        NavigationBarItem(
+            selected = false,
+            onClick = onSelectDocument,
+            icon = { Text("+", style = MaterialTheme.typography.titleMedium) },
+            label = { Text("Belge seç") },
+        )
+    }
+}
+
 private enum class LegalDocument(val label: String, val assetPath: String) {
+    PRIVACY("Gizlilik", "legal/PRIVACY_POLICY.txt"),
     NOTICES("Bildirimler", "legal/THIRD_PARTY_NOTICES.txt"),
     MODEL_LICENSE("Model lisansı", "tts/supertonic3/LICENSE"),
     APACHE("Apache-2.0", "legal/APACHE-2.0.txt"),
@@ -200,21 +230,28 @@ private enum class LegalDocument(val label: String, val assetPath: String) {
 @Composable
 private fun LegalNoticesDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
-    var selectedDocument by rememberSaveable { mutableStateOf(LegalDocument.NOTICES) }
+    var selectedDocument by rememberSaveable { mutableStateOf(LegalDocument.PRIVACY) }
     val documentText = remember(selectedDocument) {
         readAssetText(context, selectedDocument.assetPath)
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Lisanslar ve yasal bildirimler") },
+        title = { Text("Gizlilik ve yasal bilgiler") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LegalDocument.entries.forEach { document ->
-                    TextButton(
-                        onClick = { selectedDocument = document },
-                        enabled = document != selectedDocument,
-                    ) {
-                        Text(document.label)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    LegalDocument.entries.forEach { document ->
+                        TextButton(
+                            onClick = { selectedDocument = document },
+                            enabled = document != selectedDocument,
+                        ) {
+                            Text(document.label)
+                        }
                     }
                 }
                 HorizontalDivider()
@@ -305,7 +342,6 @@ private fun PlaybackControls(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -379,7 +415,7 @@ private fun PlaybackControls(
 }
 
 @Composable
-private fun EmptyDocument(onSelectDocument: () -> Unit) {
+private fun EmptyDocument() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -388,16 +424,16 @@ private fun EmptyDocument(onSelectDocument: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Dinlemek istediğiniz PDF veya EPUB belgesini seçin.",
+            text = "Dinlemek istediğiniz PDF veya EPUB belgesini alttaki “Belge seç” " +
+                    "seçeneğiyle açın.",
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
             text = "PDF sayfaları ve EPUB bölümleri otomatik olarak işlenir.",
-            modifier = Modifier.padding(top = 8.dp, bottom = 20.dp),
+            modifier = Modifier.padding(top = 8.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Button(onClick = onSelectDocument) { Text("Belge seç") }
     }
 }
 
@@ -426,7 +462,7 @@ private fun LoadingDocument(progress: DocumentExtractionProgress?) {
 }
 
 @Composable
-private fun ErrorDocument(message: String, onSelectDocument: () -> Unit) {
+private fun ErrorDocument(message: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -435,9 +471,12 @@ private fun ErrorDocument(message: String, onSelectDocument: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(message, color = MaterialTheme.colorScheme.error)
-        Button(onClick = onSelectDocument, modifier = Modifier.padding(top = 20.dp)) {
-            Text("Başka belge seç")
-        }
+        Text(
+            text = "Başka bir dosya denemek için alttaki “Belge seç” seçeneğini kullanın.",
+            modifier = Modifier.padding(top = 12.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
