@@ -52,6 +52,7 @@
     <string name="reader_paused_status">Duraklatıldı • Parça %1$d/%2$d • %3$s</string>
     <string name="reader_restored_status">Kaldığınız yer hazır • Parça %1$d/%2$d • %3$s</string>
     <plurals name="reader_ready_status">
+        <item quantity="one">%1$d konuşma bölümü hazır</item>
         <item quantity="other">%1$d konuşma bölümü hazır</item>
     </plurals>
     <string name="action_pause">Duraklat</string>
