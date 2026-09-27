@@ -9,6 +9,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
+import android.media.MediaMetadata
+import android.media.session.MediaSession
+import android.media.session.PlaybackState as PlatformPlaybackState
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -36,12 +39,27 @@ class TtsPlaybackService : Service() {
     private var fileName: String = ""
     private var hasActivePlayback = false
     private var wakeLock: PowerManager.WakeLock? = null
+    private lateinit var mediaSession: MediaSession
 
     override fun onCreate() {
         super.onCreate()
         notificationManager = getSystemService(NotificationManager::class.java)
         createNotificationChannel()
         fileName = getString(R.string.app_name)
+        mediaSession = MediaSession(this, MEDIA_SESSION_TAG).apply {
+            setCallback(object : MediaSession.Callback() {
+                override fun onPlay() = playbackController.play()
+                override fun onPause() = playbackController.pause()
+                override fun onSkipToPrevious() = playbackController.previous()
+                override fun onSkipToNext() = playbackController.next()
+                override fun onStop() {
+                    playbackController.stop()
+                    stopPlaybackService()
+                }
+            })
+            isActive = true
+        }
+        updateMediaMetadata()
 
         serviceScope.launch {
             playbackController.state.collectLatest(::onPlaybackStateChanged)
@@ -51,7 +69,10 @@ class TtsPlaybackService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.getStringExtra(EXTRA_FILE_NAME)
             ?.takeIf(String::isNotBlank)
-            ?.let { fileName = it }
+            ?.let {
+                fileName = it
+                updateMediaMetadata()
+            }
 
         // startForegroundService() must be promoted before potentially expensive TTS work begins.
         startInForeground(playbackController.state.value)
@@ -76,11 +97,14 @@ class TtsPlaybackService : Service() {
 
     override fun onDestroy() {
         releaseWakeLock()
+        mediaSession.isActive = false
+        mediaSession.release()
         serviceScope.cancel()
         super.onDestroy()
     }
 
     private fun onPlaybackStateChanged(state: PlaybackState) {
+        updateMediaSessionState(state)
         when (state) {
             is PlaybackState.Preparing, is PlaybackState.Playing -> {
                 hasActivePlayback = true
@@ -169,8 +193,46 @@ class TtsPlaybackService : Service() {
                     servicePendingIntent(ACTION_NEXT, REQUEST_NEXT),
                 ).build(),
             )
-            .setStyle(Notification.MediaStyle().setShowActionsInCompactView(0, 1, 2))
+            .setStyle(
+                Notification.MediaStyle()
+                    .setMediaSession(mediaSession.sessionToken)
+                    .setShowActionsInCompactView(0, 1, 2),
+            )
             .build()
+    }
+
+    private fun updateMediaSessionState(state: PlaybackState) {
+        val platformState = when (state) {
+            is PlaybackState.Preparing -> PlatformPlaybackState.STATE_BUFFERING
+            is PlaybackState.Playing -> PlatformPlaybackState.STATE_PLAYING
+            is PlaybackState.Paused -> PlatformPlaybackState.STATE_PAUSED
+            is PlaybackState.Error -> PlatformPlaybackState.STATE_ERROR
+            PlaybackState.Idle -> PlatformPlaybackState.STATE_STOPPED
+        }
+        val actions = PlatformPlaybackState.ACTION_PLAY or
+            PlatformPlaybackState.ACTION_PAUSE or
+            PlatformPlaybackState.ACTION_PLAY_PAUSE or
+            PlatformPlaybackState.ACTION_SKIP_TO_PREVIOUS or
+            PlatformPlaybackState.ACTION_SKIP_TO_NEXT or
+            PlatformPlaybackState.ACTION_STOP
+        mediaSession.setPlaybackState(
+            PlatformPlaybackState.Builder()
+                .setActions(actions)
+                .setState(platformState, PlatformPlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f)
+                .apply {
+                    if (state is PlaybackState.Error) setErrorMessage(state.error.message)
+                }
+                .build(),
+        )
+    }
+
+    private fun updateMediaMetadata() {
+        mediaSession.setMetadata(
+            MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, fileName)
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, fileName)
+                .build(),
+        )
     }
 
     private fun PlaybackState.notificationText(): String = when (this) {
@@ -236,6 +298,7 @@ class TtsPlaybackService : Service() {
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "tts_playback"
         private const val NOTIFICATION_ID = 1001
+        private const val MEDIA_SESSION_TAG = "SeslendirmenPlayback"
 
         private const val ACTION_PLAY = "com.mutkuensert.seslendirmen.action.PLAY"
         private const val ACTION_PLAY_FROM = "com.mutkuensert.seslendirmen.action.PLAY_FROM"

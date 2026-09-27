@@ -194,6 +194,7 @@ class BufferedTtsPlaybackController @Inject constructor(
                     next != null
                 }
                 if (!hasNext) {
+                    audioPlayer.stop()
                     synchronized(lock) {
                         if (version == playbackVersion) _state.value = PlaybackState.Idle
                     }
@@ -203,6 +204,7 @@ class BufferedTtsPlaybackController @Inject constructor(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Throwable) {
+            audioPlayer.stop()
             synchronized(lock) {
                 if (version == playbackVersion) {
                     _state.value = PlaybackState.Error(error.toPlaybackError())

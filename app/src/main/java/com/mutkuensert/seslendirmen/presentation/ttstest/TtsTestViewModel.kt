@@ -56,6 +56,8 @@ class TtsTestViewModel @Inject constructor(
                 throw cancelled
             } catch (error: Throwable) {
                 showError(error)
+            } finally {
+                audioPlayer.stop()
             }
         }
     }
