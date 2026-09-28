@@ -26,6 +26,7 @@ their SHA-256 checksums are recorded in tts/supertonic3/MODEL_CARD.md.
 ---------------
 Component: sherpa-onnx 1.13.8 Android runtime
 Project: https://github.com/k2-fsa/sherpa-onnx
+Android AAR source: https://github.com/k2-fsa/sherpa-onnx/tree/v1.13.8/android/SherpaOnnxAar
 Copyright: sherpa-onnx contributors
 License: Apache License 2.0
 Full license in the application: legal/APACHE-2.0.txt
