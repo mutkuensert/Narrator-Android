@@ -1,6 +1,6 @@
-# Seslendirmen
+# Narrator(Seslendirmen)
 
-Seslendirmen is an offline Android document reader that extracts text from PDF and EPUB files and
+Narrator(Seslendirmen) is an offline Android document reader that extracts text from PDF and EPUB files and
 reads it aloud on the device. Text-to-speech uses Supertonic 3 through sherpa-onnx. Scanned PDF
 pages can be processed with the bundled Google ML Kit text-recognition component.
 

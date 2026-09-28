@@ -1,18 +1,18 @@
-# Seslendirmen Gizlilik Politikası / Privacy Policy
+# Narrator(Seslendirmen) Gizlilik Politikası / Privacy Policy
 
 **Yürürlük ve son güncelleme tarihi / Effective and last updated:** 28 Eylül 2026 / 28 September 2026
 
-Bu politika, M. Utku Ensert ("geliştirici") tarafından sunulan Seslendirmen Android uygulamasını
+Bu politika, M. Utku Ensert ("geliştirici") tarafından sunulan Narrator(Seslendirmen) Android uygulamasını
 ("uygulama") kapsar. Sorularınız için `ensertyazilim@gmail.com` adresinden iletişime geçebilirsiniz.
 
-This policy applies to the Seslendirmen Android application (the "app") provided by M. Utku Ensert
+This policy applies to the Narrator(Seslendirmen) Android application (the "app") provided by M. Utku Ensert
 (the "developer"). For questions, contact `ensertyazilim@gmail.com`.
 
 ## Türkçe
 
 ### Kısa özet
 
-Seslendirmen, kullanıcının seçtiği PDF ve EPUB belgelerini cihaz üzerinde işleyen çevrimdışı bir
+Narrator(Seslendirmen), kullanıcının seçtiği PDF ve EPUB belgelerini cihaz üzerinde işleyen çevrimdışı bir
 belge okuyucudur. Uygulama internet izni istemez; hesap, geliştirici sunucusu, reklam, kullanıcı
 izleme, Firebase Analytics veya Crashlytics içermez. Belgelerin içeriği, OCR ile tanınan metin ve
 üretilen konuşma geliştiriciye ya da Google'a gönderilmez. Bununla birlikte, aşağıda açıklandığı
@@ -96,7 +96,7 @@ Gizlilik soruları ve hak talepleri için: `ensertyazilim@gmail.com`.
 
 ### Summary
 
-Seslendirmen is an offline document reader that processes user-selected PDF and EPUB documents on
+Narrator(Seslendirmen) is an offline document reader that processes user-selected PDF and EPUB documents on
 the device. The app does not request Internet permission and has no account system, developer
 server, advertising, user tracking, Firebase Analytics, or Crashlytics. Document contents,
 OCR-recognized text, and generated speech are not sent to the developer or Google. However, the

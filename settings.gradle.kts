@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Seslendirmen"
+rootProject.name = "Narrator"
 include(":app")

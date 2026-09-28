@@ -1,4 +1,4 @@
-SESLENDIRMEN - THIRD-PARTY NOTICES
+NARRATOR(SESLENDİRMEN) - THIRD-PARTY NOTICES
 =================================
 
 The notices below apply to the listed third-party components. They do not change the license of the
@@ -19,7 +19,7 @@ Apache-2.0 license does not apply to these model assets.
 
 The local ONNX weights are the INT8 conversion distributed by sherpa-onnx as
 "sherpa-onnx-supertonic-3-tts-int8-2026-05-11". This conversion differs from the original upstream
-floating-point weights. The Seslendirmen project has not made further modifications to the files;
+floating-point weights. The Narrator(Seslendirmen) project has not made further modifications to the files;
 their SHA-256 checksums are recorded in tts/supertonic3/MODEL_CARD.md.
 
 2. SHERPA-ONNX

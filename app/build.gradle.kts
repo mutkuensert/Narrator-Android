@@ -7,13 +7,13 @@ plugins {
 }
 
 android {
-    namespace = "com.mutkuensert.seslendirmen"
+    namespace = "com.mutkuensert.narrator"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.mutkuensert.seslendirmen"
+        applicationId = "com.mutkuensert.narrator"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
