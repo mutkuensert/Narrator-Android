@@ -30,6 +30,23 @@ class ConservativeTextPreprocessorTest {
     }
 
     @Test
+    fun `joins hyphenated word across whitespace and extraction control characters`() {
+        val result = preprocessor.preprocessPage(
+            rawText = "Bu metin seslen-\u200B \r\n\u000C\t dirilebilir.",
+            pageNumber = 1,
+        )
+
+        assertEquals(listOf("Bu metin seslendirilebilir."), result.map { it.text })
+    }
+
+    @Test
+    fun `joins discretionary hyphens across more than one line break`() {
+        val result = preprocessor.preprocessPage("Oku\u00AD\n\n\uFEFFnabilir metin", 1)
+
+        assertEquals(listOf("Okunabilir metin"), result.map { it.text })
+    }
+
+    @Test
     fun `keeps hyphen when next line begins with uppercase letter`() {
         val result = preprocessor.preprocessPage("Ankara-\nİstanbul hattı", 1)
 
@@ -37,10 +54,27 @@ class ConservativeTextPreprocessorTest {
     }
 
     @Test
+    fun `joins an uppercase word split by a line ending hyphen`() {
+        val result = preprocessor.preprocessPage("SESLEN-\nDİRİLEBİLİR METİN", 1)
+
+        assertEquals(listOf("SESLENDİRİLEBİLİR METİN"), result.map { it.text })
+    }
+
+    @Test
     fun `preserves paragraphs separated by empty lines`() {
         val result = preprocessor.preprocessPage("Birinci paragraf.\n\nİkinci paragraf.", 1)
 
         assertEquals(listOf("Birinci paragraf.", "İkinci paragraf."), result.map { it.text })
+    }
+
+    @Test
+    fun `removes invisible controls and spaces around punctuation`() {
+        val result = preprocessor.preprocessPage(
+            "Bu\u0000   bir test  ,  ( düzgün )  metin !",
+            1,
+        )
+
+        assertEquals(listOf("Bu bir test, (düzgün) metin!"), result.map { it.text })
     }
 
     @Test
