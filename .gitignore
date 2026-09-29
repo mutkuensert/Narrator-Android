@@ -11,3 +11,7 @@ mapping.txt
 .externalNativeBuild
 .cxx
 local.properties
+
+# Downloaded TTS runtime and model assets
+/app/libs/sherpa-onnx-1.13.8.aar
+/app/src/main/assets/tts/supertonic3/

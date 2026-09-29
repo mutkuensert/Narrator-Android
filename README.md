@@ -13,7 +13,7 @@ reading positions, and generated audio remain on the device.
   required.
 - Extracts embedded PDF text and automatically applies OCR to scanned or image-only pages.
 - Reads EPUB content in spine order and uses the book metadata title when available.
-- Generates Turkish or English speech locally with the bundled Supertonic 3 INT8 model.
+- Generates Turkish or English speech locally with the installed Supertonic 3 INT8 model.
 - Provides play, pause, previous, next, and restart controls in the app, plus playback controls in a
   media notification.
 - Starts narration from a tapped paragraph and follows the active paragraph while reading.
@@ -31,7 +31,6 @@ reading positions, and generated audio remain on the device.
 | Documents | PDF and EPUB |
 | Narration languages | Turkish and English |
 | OCR | On-device Latin-script text recognition for PDF fallback |
-| Encrypted PDFs | Not currently supported |
 
 Large documents and OCR-heavy PDFs can take longer to prepare. Speech generation speed and memory
 use also depend on the device; lowering the quality step count improves generation speed at the
@@ -42,42 +41,53 @@ cost of naturalness.
 ### Prerequisites
 
 - Android Studio with Android SDK 37 installed
-- Git LFS, which is used for the bundled `.onnx` model files
 
 The repository configures its Gradle daemon toolchain automatically and includes the Gradle wrapper.
 
+### Install the text-to-speech dependencies
+
+The sherpa-onnx Android archive and Supertonic 3 model are intentionally not stored in this
+repository. Download both before building the application:
+
+| Dependency | Download | Destination in the repository |
+| --- | --- | --- |
+| sherpa-onnx 1.13.8 Android library | [`sherpa-onnx-1.13.8.aar`](https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-1.13.8.aar) | Save the file as `app/libs/sherpa-onnx-1.13.8.aar`. |
+| Supertonic 3 INT8 model | [`sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2`](https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2) | Extract the archive, then copy the model files from its top-level `sherpa-onnx-supertonic-3-tts-int8-2026-05-11` directory into `app/src/main/assets/tts/supertonic3/`. Do not copy the archive's `LICENSE` file. |
+| Supertonic 3 model license | [Official Open RAIL-M license](https://huggingface.co/Supertone/supertonic-3/resolve/main/LICENSE) | Save the file as `app/src/main/assets/tts/supertonic3/LICENSE`. |
+
+The model archive is the INT8 conversion distributed by sherpa-onnx and is derived from
+[Supertonic 3 by Supertone](https://huggingface.co/Supertone/supertonic-3). This project does not
+further modify those converted files. See the official
+[sherpa-onnx Supertonic documentation](https://k2-fsa.github.io/sherpa/onnx/tts/supertonic.html)
+for the package source, supported languages, and usage examples. Additional information about the
+Android library is available in the
+[sherpa-onnx AAR documentation](https://github.com/k2-fsa/sherpa-onnx/tree/v1.13.8/android/SherpaOnnxAar).
+
+The sherpa-onnx model archive contains the MIT license used by Supertonic's sample-code repository,
+but the model weights are licensed separately under the BigScience Open RAIL-M License. Keep the
+official model license downloaded from the Supertonic 3 model repository at the path shown above;
+do not replace it with the archive's MIT `LICENSE` file.
+
+The installation is complete when the following required files exist:
+
+```text
+app/libs/sherpa-onnx-1.13.8.aar
+app/src/main/assets/tts/supertonic3/duration_predictor.int8.onnx
+app/src/main/assets/tts/supertonic3/text_encoder.int8.onnx
+app/src/main/assets/tts/supertonic3/vector_estimator.int8.onnx
+app/src/main/assets/tts/supertonic3/vocoder.int8.onnx
+app/src/main/assets/tts/supertonic3/tts.json
+app/src/main/assets/tts/supertonic3/unicode_indexer.bin
+app/src/main/assets/tts/supertonic3/voice.bin
+app/src/main/assets/tts/supertonic3/LICENSE
+```
+
+These paths are ignored by Git and must be installed separately in every clone. Gradle packages the
+locally installed model into the APK, so the built application remains fully offline at runtime.
+
 ### Build and run
 
-```bash
-git clone <repository-url>
-cd Narrator-Android
-git lfs pull
-./gradlew :app:assembleDebug
-```
-
-Install the debug build on a connected device or emulator with:
-
-```bash
-./gradlew :app:installDebug
-```
-
-You can also import the repository root into Android Studio and run the `app` configuration. The
-first build needs network access to resolve Gradle and Maven dependencies; the application itself
-does not need network access at runtime.
-
-### Tests
-
-Run the local unit tests:
-
-```bash
-./gradlew :app:testDebugUnitTest
-```
-
-With a device or emulator connected, run the instrumented tests:
-
-```bash
-./gradlew :app:connectedDebugAndroidTest
-```
+You can run the app after installing the text-to-speech dependencies.
 
 ## How it works
 
@@ -86,8 +96,8 @@ With a device or emulator connected, run the instrumented tests:
 2. PDFBox extracts PDF text. Pages without meaningful text are rendered and passed to ML Kit OCR.
    EPUB files are parsed from their package manifest and spine.
 3. Extracted paragraphs are split into locale-aware speech chunks.
-4. sherpa-onnx runs the bundled Supertonic 3 model on CPU. The next chunk is prefetched while the
-   current chunk is played through `AudioTrack`.
+4. sherpa-onnx runs the locally installed Supertonic 3 model on CPU. The next chunk is prefetched
+   while the current chunk is played through `AudioTrack`.
 5. A foreground media service keeps playback controls available, while local preferences retain
    narration settings and per-document reading positions.
 
@@ -123,11 +133,12 @@ in Play Console.
 The source code written for this repository is licensed under the [Apache License 2.0](LICENSE).
 Third-party software and model assets retain their own licenses and terms:
 
-- The Supertonic 3 files under `app/src/main/assets/tts/supertonic3/` are governed by the
-  **BigScience Open RAIL-M License**, which contains use-based restrictions and redistribution
-  conditions. They are not Apache-2.0- or MIT-licensed. See the bundled model
-  [license](app/src/main/assets/tts/supertonic3/LICENSE) and
-  [model card](app/src/main/assets/tts/supertonic3/MODEL_CARD.md).
+- The locally installed Supertonic 3 files under `app/src/main/assets/tts/supertonic3/` are governed
+  by the **BigScience Open RAIL-M License**, which contains use-based restrictions and
+  redistribution conditions. They are not Apache-2.0- or MIT-licensed. Review the upstream
+  [Supertonic 3 model page](https://huggingface.co/Supertone/supertonic-3) and its
+  [official model license](https://huggingface.co/Supertone/supertonic-3/blob/main/LICENSE) before
+  using or redistributing the model.
 - sherpa-onnx and most Android/JVM components are distributed under Apache-2.0.
 - ONNX Runtime is distributed under the MIT License.
 - PDFBox-Android is distributed under Apache-2.0.
@@ -138,10 +149,3 @@ The complete notices shipped with the application are in
 [`THIRD_PARTY_NOTICES.txt`](app/src/main/assets/legal/THIRD_PARTY_NOTICES.txt) and are available from
 **Settings > Legal information > Notices**. Anyone redistributing the application must preserve the
 applicable notices and comply with the Supertonic 3 model license in particular.
-
-## Model provenance
-
-The bundled model files come from the sherpa-onnx package
-`sherpa-onnx-supertonic-3-tts-int8-2026-05-11`, derived from Supertonic 3 by Supertone. The project
-has not further modified those converted files. Their SHA-256 checksums and provenance are recorded
-in the bundled [model card](app/src/main/assets/tts/supertonic3/MODEL_CARD.md).

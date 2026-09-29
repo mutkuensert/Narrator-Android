@@ -4,10 +4,11 @@ Copyright 2026 M. Utku Ensert
 This product includes third-party software and model assets. The source code in this repository is
 licensed under Apache License 2.0 except where a file or directory states otherwise.
 
-The Supertonic 3 model assets under app/src/main/assets/tts/supertonic3 are NOT licensed under the
-project's Apache-2.0 license. They are governed by the BigScience Open RAIL-M License included in
-that directory.
+The separately downloaded Supertonic 3 model assets installed under
+app/src/main/assets/tts/supertonic3 are NOT licensed under the project's Apache-2.0 license. They
+are governed by the BigScience Open RAIL-M License published in the official Supertonic 3 model
+repository. Although these files are excluded from the Git repository, Gradle includes them in
+application builds.
 
 Additional attributions and terms are provided in:
 app/src/main/assets/legal/THIRD_PARTY_NOTICES.txt
-
