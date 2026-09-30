@@ -23,6 +23,13 @@ reading positions, and generated audio remain on the device.
 - Includes Turkish and English interface resources and exposes privacy and license documents inside
   the app.
 
+## Screenshot
+
+<div style="text-align: center;">
+ <img src="docs/screenshot.png" width="250" alt="Narrator Screenshot"/>
+</div>
+
+
 ## Supported devices and formats
 
 | Item | Support |
